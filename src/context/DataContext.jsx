@@ -50,7 +50,6 @@ export function DataProvider({ children }) {
     }
   }, [syncFromServer]);
 
-  const login = useCallback(async (email, password) => {
   const handleAuthSuccess = async (userData) => {
     try {
       const checkin = await api.post('/streaks/checkin');
