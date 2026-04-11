@@ -8,7 +8,9 @@ export default function TopNav() {
   const { user, logout, notifications, unreadCount, markNotificationRead, markAllRead, searchQuery, setSearchQuery } = useData();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notifRef = useRef(null);
+  const profileRef = useRef(null);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -19,6 +21,7 @@ export default function TopNav() {
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifs(false);
+      if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfileMenu(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -166,8 +169,22 @@ export default function TopNav() {
 
           {user && (
             <div className="flex items-center md:gap-3">
-              <div className="h-8 w-8 rounded-full overflow-hidden border border-primary/10 ml-1">
-                <img alt={user.name} className="h-full w-full object-cover" src={user.avatar} />
+              <div className="relative" ref={profileRef}>
+                <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="h-8 w-8 rounded-full overflow-hidden border border-primary/10 ml-1 block outline-none">
+                  <img alt={user.name} className="h-full w-full object-cover" src={user.avatar} />
+                </button>
+                {showProfileMenu && (
+                  <div className="md:hidden absolute right-0 top-12 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-outline-variant/10 dark:border-slate-800 z-50 overflow-hidden transform origin-top-right transition-all">
+                    <div className="px-4 py-3 border-b border-outline-variant/10 dark:border-slate-800">
+                      <p className="text-xs font-black truncate text-on-surface dark:text-white">{user.name}</p>
+                      <p className="text-[10px] text-on-surface-variant dark:text-slate-500 truncate">{user.email}</p>
+                    </div>
+                    <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-xs font-bold text-error dark:text-red-400 hover:bg-error/5 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors">
+                      <span className="material-symbols-outlined text-sm">logout</span>
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 onClick={handleLogout}
