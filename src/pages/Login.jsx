@@ -11,6 +11,9 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('student');
+  const [usn, setUsn] = useState('');
+  const [className, setClassName] = useState('1st Year');
+  const [section, setSection] = useState('A');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -81,7 +84,13 @@ export default function Login() {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match');
         }
-        await register(name, email, password, role.toUpperCase());
+        
+        // Client-side USN check
+        if (!/^1RL24SCS\d{2}$/i.test(usn)) {
+          throw new Error('USN must follow the format 1RL24SCSXX (e.g., 1RL24SCS01)');
+        }
+
+        await register(name, email, password, usn, className, section);
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please check your details.');
@@ -168,20 +177,64 @@ export default function Login() {
               )}
 
               {mode === 'register' && (
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="name">Full Name</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="person">person</span>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
-                      id="name"
-                      required
-                      type="text"
-                    />
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="name">Full Name</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg">person</span>
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
+                        id="name"
+                        required
+                        type="text"
+                        placeholder="John Doe"
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="usn">USN</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg">badge</span>
+                      <input
+                        value={usn}
+                        onChange={(e) => setUsn(e.target.value)}
+                        placeholder="1RL24SCS01"
+                        className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
+                        id="usn"
+                        required
+                        type="text"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="class">Class</label>
+                      <select
+                        value={className}
+                        onChange={(e) => setClassName(e.target.value)}
+                        className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none appearance-none"
+                        id="class"
+                      >
+                        {["1st Year", "2nd Year", "3rd Year", "4th Year"].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="section">Section</label>
+                      <select
+                        value={section}
+                        onChange={(e) => setSection(e.target.value)}
+                        className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none appearance-none"
+                        id="section"
+                      >
+                        {["A", "B", "C", "D"].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="space-y-2">

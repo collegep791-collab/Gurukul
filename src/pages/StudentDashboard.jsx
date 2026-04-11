@@ -61,9 +61,9 @@ export default function StudentDashboard() {
       {/* Header Section */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-on-surface dark:text-white mb-3">Welcome, {user.name.split(' ')[0]}</h1>
-          <p className="text-on-surface-variant dark:text-slate-400 text-lg font-medium max-w-2xl">
-            You've completed <span className="text-primary dark:text-indigo-400 font-black">{user.progress}%</span> of your weekly goals. Your academic momentum is exceptional.
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight text-on-surface dark:text-white mb-3">Welcome, {user.name?.split(' ')[0] || 'Scholar'}</h1>
+          <p className="text-on-surface-variant dark:text-slate-400 text-base md:text-lg font-medium max-w-2xl">
+            You've completed <span className="text-primary dark:text-indigo-400 font-black">{user.progress || 0}%</span> of your weekly goals. Your academic momentum is exceptional.
           </p>
         </div>
         
@@ -83,7 +83,7 @@ export default function StudentDashboard() {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500">Credits</p>
-              <p className="text-xl font-black text-on-surface dark:text-white">{user.credits?.toLocaleString()}</p>
+              <p className="text-xl font-black text-on-surface dark:text-white">{(user.credits || 0).toLocaleString()}</p>
             </div>
           </div>
         </div>

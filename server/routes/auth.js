@@ -37,29 +37,44 @@ router.post('/login', (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', (req, res) => {
-  const { name, email, password, role } = req.body;
-  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
+  const { name, email, password, usn, class: className, section } = req.body;
+  
+  if (!name || !email || !password || !usn || !className || !section) {
+    return res.status(400).json({ error: 'All fields (Name, Email, Password, USN, Class, Section) are required' });
+  }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
+  // USN Validation (Pattern: 1RL24SCSXX)
+  const usnRegex = /^1RL24SCS\d{2}$/i;
+  if (!usnRegex.test(usn)) {
+    return res.status(400).json({ error: 'Invalid USN format. Required format: 1RL24SCSXX (e.g., 1RL24SCS01)' });
+  }
+
   const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
   if (existing) return res.status(400).json({ error: 'Email already registered' });
 
+  const existingUsn = db.prepare('SELECT id FROM users WHERE usn = ?').get(usn.trim().toUpperCase());
+  if (existingUsn) return res.status(400).json({ error: 'USN already registered' });
+
   const hash = bcrypt.hashSync(password, 10);
-  const userRole = ['STUDENT', 'TEACHER', 'ADMIN'].includes(role) ? role : 'STUDENT';
+  
+  // Everyone registers as STUDENT by default for security. 
+  // Admin must manually promote a user to TEACHER.
+  const userRole = 'STUDENT';
   
   try {
     const result = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role) 
-      VALUES (?, ?, ?, ?)
-    `).run(name.trim(), email.trim().toLowerCase(), hash, userRole);
+      INSERT INTO users (name, email, password_hash, role, usn, class, section) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(name.trim(), email.trim().toLowerCase(), hash, userRole, usn.trim().toUpperCase(), className, section);
     
     const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     req.session.userId = newUser.id;
     
-    // Log activity for streak tracking (assuming user_activity table exists or will exist)
+    // Log activity for streak tracking
     try {
       db.prepare("INSERT INTO user_activity (user_id, activity_type) VALUES (?, 'login')").run(newUser.id);
       
@@ -67,13 +82,12 @@ router.post('/register', (req, res) => {
       if (globalHub) {
         db.prepare("INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)").run(globalHub.id, newUser.id);
       }
-    } catch (e) {
-      // Ignore if table doesn't exist yet
-    }
+    } catch (e) {}
     
     const { password_hash: _ph, ...safeUser } = newUser;
     res.json(safeUser);
   } catch (err) {
+    console.error('Registration Error:', err);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });

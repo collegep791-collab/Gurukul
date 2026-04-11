@@ -20,6 +20,57 @@ router.get('/channels', (req, res) => {
   res.json(channels);
 });
 
+// POST /api/chat/channels — Teacher/Admin creates a specialized class channel
+router.post('/channels', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { name, description, class: className, section } = req.body;
+  if (!name) return res.status(400).json({ error: 'Channel name required' });
+
+  const creator = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
+  if (creator?.role !== 'ADMIN' && creator?.role !== 'TEACHER') {
+    return res.status(403).json({ error: 'Only Faculty or Admins can create channels' });
+  }
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO chat_channels (name, description, type, created_by) 
+      VALUES (?, ?, 'channel', ?)
+    `).run(name, description || '', req.session.userId);
+    const channelId = result.lastInsertRowid;
+
+    // 1. Add Creator
+    db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)').run(channelId, req.session.userId);
+
+    // 2. Auto-Enroll matching students
+    if (className || section) {
+      let query = 'SELECT id FROM users WHERE role = "STUDENT"';
+      const params = [];
+      if (className) { query += ' AND class = ?'; params.push(className); }
+      if (section) { query += ' AND section = ?'; params.push(section); }
+
+      const students = db.prepare(query).all(...params);
+      const insertStmt = db.prepare('INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)');
+      
+      for (const student of students) {
+        if (student.id === req.session.userId) continue;
+        insertStmt.run(channelId, student.id);
+      }
+    }
+
+    const channel = db.prepare(`
+      SELECT c.*, 
+        (SELECT COUNT(*) FROM chat_channel_members WHERE channel_id = c.id) as member_count
+      FROM chat_channels c WHERE c.id = ?
+    `).get(channelId);
+
+    res.status(201).json(channel);
+  } catch (err) {
+    console.error('Channel Create Error:', err);
+    res.status(500).json({ error: 'Failed to create channel' });
+  }
+});
+
 // GET /api/chat/channels/:id/messages?before=<id>&limit=50
 router.get('/channels/:id/messages', (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
