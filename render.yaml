@@ -10,5 +10,5 @@ services:
         value: production
       - key: SESSION_SECRET
         generateValue: true
-      - key: GOOGLE_CLIENT_ID
+      - key: VITE_GOOGLE_CLIENT_ID
         sync: false
