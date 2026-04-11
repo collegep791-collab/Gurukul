@@ -12,6 +12,13 @@ async function request(method, path, body = null) {
   const data = await res.json();
 
   if (!res.ok) {
+    if (res.status === 401) {
+      // If unauthorized, session is expired. Reload to trigger AuthGuard protection
+      window.dispatchEvent(new Event('unauthorized'));
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     const err = new Error(data.error || `Request failed: ${res.status}`);
     err.status = res.status;
     throw err;
@@ -35,6 +42,12 @@ const api = {
     });
     const data = await res.json();
     if (!res.ok) {
+      if (res.status === 401) {
+        window.dispatchEvent(new Event('unauthorized'));
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
       const err = new Error(data.error || `Upload failed: ${res.status}`);
       err.status = res.status;
       throw err;
