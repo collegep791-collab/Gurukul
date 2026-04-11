@@ -41,8 +41,13 @@ router.post('/register', (req, res) => {
   
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
 
-  // Optional: basic validation on USN here. The user requested flexible format, so no strict format check is needed.
-  if (usn && usn.length < 3) return res.status(400).json({ error: 'USN must be at least 3 characters if provided' });
+  // USN Validation: Enforce the '1RL24SCSXX' format strictly
+  if (usn) {
+    const usnRegex = /^1RL24SCS[A-Z0-9]{2}$/i;
+    if (!usnRegex.test(usn.trim())) {
+      return res.status(400).json({ error: 'Invalid USN format. Must be like 1RL24SCSXX' });
+    }
+  }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' });
