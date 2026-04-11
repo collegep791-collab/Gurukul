@@ -39,7 +39,8 @@ const server = createServer(app);
 // ─── Security Middleware ───
 app.use(helmet({
   contentSecurityPolicy: false,  // Disabled for CDN Tailwind
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false // Allows Google Auth Popup to communicate back
 }));
 
 // Global rate limit: 300 requests per 15 minutes
