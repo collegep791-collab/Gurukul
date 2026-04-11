@@ -12,16 +12,49 @@ export default function StudentDashboard() {
   const recentNotes = notes.slice(0, 3);
   const latestMessages = messages.slice(-3);
 
-  // Assignments data for student
-  const pendingAssignments = (assignments || []).filter(a => !a.submitted_at && new Date(a.due_date) >= new Date());
-  const overdueAssignments = (assignments || []).filter(a => !a.submitted_at && new Date(a.due_date) < new Date());
-  const gradedAssignments = (assignments || []).filter(a => a.grade !== null && a.grade !== undefined);
+  // Assignments data for student — uses my_submission_id / my_grade from the API
+  const now = new Date().getTime();
+  const pendingAssignments = (assignments || []).filter(a => {
+    if (!a.due_date) return false;
+    const isGraded = a.my_grade !== null && a.my_grade !== undefined;
+    const isSubmitted = a.my_submission_id !== null && a.my_submission_id !== undefined;
+    return !isGraded && !isSubmitted && new Date(a.due_date).getTime() >= now;
+  });
+  
+  const overdueAssignments = (assignments || []).filter(a => {
+    if (!a.due_date) return false;
+    const isGraded = a.my_grade !== null && a.my_grade !== undefined;
+    const isSubmitted = a.my_submission_id !== null && a.my_submission_id !== undefined;
+    return !isGraded && !isSubmitted && new Date(a.due_date).getTime() < now;
+  });
+  
+  const gradedAssignments = (assignments || []).filter(a => a.my_grade !== null && a.my_grade !== undefined);
 
-  // Dynamic course progress from resources
-  const courseProgress = [
-    { label: resources.find(r => r.category === 'Ethics')?.category || 'Liberal Arts', subject: resources.find(r => r.category === 'Ethics')?.title || 'Philosophy of Ethics', pct: 42, color: 'primary', badgeClass: 'bg-primary-fixed text-on-primary-fixed-variant' },
-    { label: resources.find(r => r.category === 'Computer Science')?.category || 'Computer Science', subject: resources.find(r => r.category === 'Computer Science')?.title || 'Data Structures', pct: 78, color: 'secondary', badgeClass: 'bg-secondary-fixed text-on-secondary-fixed-variant' },
-  ];
+  // Dynamic course progress from real graded assignments
+  const courseProgress = [];
+  const courses = [...new Set((assignments || []).map(a => a.course || 'General'))];
+  
+  courses.slice(0, 4).forEach((course, i) => {
+    const courseAssignments = (assignments || []).filter(a => (a.course || 'General') === course);
+    const graded = courseAssignments.filter(a => a.my_grade !== null && a.my_grade !== undefined);
+    
+    // Calculate simple progression: % of graded assignments out of total in this course
+    const pct = courseAssignments.length > 0 ? Math.round((graded.length / courseAssignments.length) * 100) : 0;
+    
+    courseProgress.push({
+      label: course,
+      subject: courseAssignments[0]?.title || 'Core Curriculum',
+      pct: pct,
+      color: i % 2 === 0 ? 'primary' : 'secondary',
+      badgeClass: i % 2 === 0 ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'bg-secondary-fixed text-on-secondary-fixed-variant'
+    });
+  });
+
+  // If no assignments exist yet, show fallback empty states so the UI retains structure
+  if (courseProgress.length === 0) {
+    courseProgress.push({ label: 'Liberal Arts', subject: 'Philosophy of Ethics', pct: 0, color: 'primary', badgeClass: 'bg-primary-fixed text-on-primary-fixed-variant' });
+    courseProgress.push({ label: 'Computer Science', subject: 'Data Structures', pct: 0, color: 'secondary', badgeClass: 'bg-secondary-fixed text-on-secondary-fixed-variant' });
+  }
 
   return (
     <DashboardLayout>
@@ -34,7 +67,7 @@ export default function StudentDashboard() {
           </p>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="bg-surface-container-low dark:bg-slate-900 px-5 py-3 rounded-2xl flex items-center gap-4 border border-outline-variant/10 dark:border-slate-800 shadow-sm">
             <div className="h-10 w-10 bg-tertiary-container dark:bg-emerald-900/50 text-on-tertiary-container dark:text-emerald-400 rounded-xl flex items-center justify-center">
               <span className="material-symbols-outlined text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>trending_up</span>

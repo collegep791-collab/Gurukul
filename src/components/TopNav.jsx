@@ -7,6 +7,7 @@ export default function TopNav() {
   const { isDark, toggleDark } = useTheme();
   const { user, logout, notifications, unreadCount, markNotificationRead, markAllRead, searchQuery, setSearchQuery } = useData();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const notifRef = useRef(null);
   const navigate = useNavigate();
 
@@ -15,7 +16,6 @@ export default function TopNav() {
     window.location.href = '/login';
   };
 
-  // Close notification dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifs(false);
@@ -53,31 +53,57 @@ export default function TopNav() {
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm shadow-indigo-900/5 transition-all">
-      <div className="flex justify-between items-center h-16 px-6 w-full max-w-full">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-on-primary shadow-sm shadow-primary/20">
-              <span className="material-symbols-outlined text-lg" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
+      <div className="flex justify-between items-center h-16 px-4 md:px-6 w-full max-w-full relative">
+        <div className="flex items-center gap-4 md:gap-8 min-w-0">
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg flex items-center justify-center text-on-primary shadow-sm shadow-primary/20">
+              <span className="material-symbols-outlined text-lg md:text-xl" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
             </div>
-            <span className="text-xl font-black tracking-tight text-primary dark:text-indigo-400">Gurukul</span>
+            <span className="text-lg md:text-xl font-black tracking-tight text-primary dark:text-indigo-400 hidden sm:block">Gurukul</span>
           </div>
-          <div className="hidden md:flex relative group">
+          
+          {/* Desktop Search */}
+          <div className="hidden md:flex relative group flex-shrink-0">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-sm">search</span>
             <input 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-surface-container-low dark:bg-slate-800 border-none rounded-full py-2 pl-10 pr-4 text-sm w-64 focus:ring-2 focus:ring-primary/20 transition-all outline-none dark:text-white dark:placeholder-slate-500" 
+              className="bg-surface-container-low dark:bg-slate-800 border-none rounded-full py-2 pl-10 pr-4 text-sm w-48 lg:w-64 focus:ring-2 focus:ring-primary/20 transition-all outline-none dark:text-white dark:placeholder-slate-500" 
               placeholder="Search..." 
               type="text" 
             />
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {/* Notification Bell */}
+
+        {/* Mobile Search Overlay */}
+        {showMobileSearch && (
+          <div className="md:hidden absolute inset-0 bg-white dark:bg-slate-900 z-50 flex items-center px-4 gap-2">
+            <button onClick={() => setShowMobileSearch(false)} className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <input 
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-surface-container-low dark:bg-slate-800 border-none rounded-full py-2 px-4 text-sm focus:outline-none dark:text-white" 
+              placeholder="Search..." 
+              type="text" 
+            />
+          </div>
+        )}
+
+        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0">
+          <button 
+            className="md:hidden p-2 text-slate-500 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full"
+            onClick={() => setShowMobileSearch(true)}
+          >
+            <span className="material-symbols-outlined">search</span>
+          </button>
+
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifs(!showNotifs)}
-              className="p-2 text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors rounded-full relative"
+              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors rounded-full relative"
             >
               <span className="material-symbols-outlined">notifications</span>
               {unreadCount > 0 && (
@@ -87,13 +113,12 @@ export default function TopNav() {
               )}
             </button>
 
-            {/* Dropdown */}
             {showNotifs && (
-              <div className="absolute right-0 top-12 w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-outline-variant/10 dark:border-slate-800 overflow-hidden z-50">
+              <div className="absolute right-0 top-12 w-[calc(100vw-32px)] md:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-outline-variant/10 dark:border-slate-800 overflow-hidden z-50 transform -translate-x-4 md:translate-x-0">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10 dark:border-slate-800">
                   <h4 className="text-sm font-black text-on-surface dark:text-white">Notifications</h4>
                   {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="text-[10px] font-black text-primary dark:text-indigo-400 uppercase tracking-widest hover:underline">
+                    <button onClick={markAllRead} className="text-[10px] font-black text-primary dark:text-indigo-400 uppercase tracking-widest hover:underline min-min-w-[44px] min-h-[44px]">
                       Mark all read
                     </button>
                   )}
@@ -129,10 +154,9 @@ export default function TopNav() {
             )}
           </div>
 
-          {/* Dark Mode Toggle */}
           <button
             onClick={toggleDark}
-            className="p-2 text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors rounded-full"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors rounded-full"
             title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             <span className="material-symbols-outlined">
@@ -141,13 +165,13 @@ export default function TopNav() {
           </button>
 
           {user && (
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full overflow-hidden border border-primary/10">
+            <div className="flex items-center md:gap-3">
+              <div className="h-8 w-8 rounded-full overflow-hidden border border-primary/10 ml-1">
                 <img alt={user.name} className="h-full w-full object-cover" src={user.avatar} />
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors rounded-full"
+                className="hidden md:flex p-2 min-w-[44px] min-h-[44px] items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors rounded-full"
                 title="Logout"
               >
                 <span className="material-symbols-outlined text-[20px]">logout</span>

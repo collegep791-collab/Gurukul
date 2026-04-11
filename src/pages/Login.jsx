@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, user } = useData();
-  const [email, setEmail] = useState('aryan@gurukul.edu');
-  const [password, setPassword] = useState('password123');
+  const { login, register, googleLogin, user } = useData();
+  const [mode, setMode] = useState('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState(mode === 'login' ? 'aryan@gurukul.edu' : '');
+  const [password, setPassword] = useState(mode === 'login' ? 'password123' : '');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('student');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const googleButtonRef = useRef(null);
 
-  // If already logged in, redirect
   useEffect(() => {
     if (user) {
       const dest = user.role === 'ADMIN' ? '/admin/dashboard' : user.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
@@ -20,16 +24,67 @@ export default function Login() {
     }
   }, [user, navigate]);
 
-  const handleLogin = async (e) => {
+  useEffect(() => {
+    // Inject Google script
+    const scriptId = 'google-gsi-script';
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.onload = () => {
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy.apps.googleusercontent.com',
+            callback: async (res) => {
+              try {
+                setLoading(true);
+                await googleLogin(res.credential);
+              } catch (err) {
+                setError('Google Login failed');
+                setLoading(false);
+              }
+            }
+          });
+          if (googleButtonRef.current) {
+            window.google.accounts.id.renderButton(googleButtonRef.current, {
+              theme: 'outline',
+              size: 'large',
+              width: '100%',
+              text: 'continue_with',
+            });
+          }
+        }
+      };
+      document.body.appendChild(script);
+    } else {
+      if (window.google?.accounts?.id && googleButtonRef.current) {
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'continue_with',
+        });
+      }
+    }
+  }, [googleLogin, mode]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const userData = await login(email, password);
-      // DataContext will handle the user state update, which triggers the useEffect above
+      if (mode === 'login') {
+        await login(email, password);
+      } else {
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        await register(name, email, password);
+      }
     } catch (err) {
-      setError(err.message || 'Invalid credentials. Please verify your email and password.');
+      setError(err.message || 'Authentication failed. Please check your details.');
     } finally {
       setLoading(false);
     }
@@ -38,79 +93,105 @@ export default function Login() {
   if (user) return null;
 
   return (
-    <div className="bg-surface dark:bg-slate-950 text-on-background dark:text-slate-100 min-h-screen flex items-center justify-center p-4 md:p-0 overflow-hidden transition-colors relative">
-      {/* Visual Polish: Background Blobs for the Page */}
-      <div className="fixed -z-10 top-0 left-0 w-full h-full pointer-events-none">
+    <div className="bg-surface text-on-background min-h-screen flex items-center justify-center p-4 md:p-0 overflow-hidden relative">
+      <div className="fixed -z-10 top-0 left-0 w-full h-full bg-surface">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary-fixed/20 rounded-full blur-[150px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-secondary-container/20 rounded-full blur-[150px]"></div>
       </div>
 
-      {/* Auth Container: Two Pane Layout */}
-      <main className="w-full max-w-6xl min-h-[800px] flex overflow-hidden rounded-xl bg-surface-container-lowest dark:bg-slate-900 shadow-2xl relative z-10 transition-colors">
-        {/* Left Pane: Form Content */}
-        <section className="w-full md:w-1/2 flex flex-col p-8 md:p-16 overflow-y-auto scrollbar-hide">
-          {/* Header Identity */}
+      <main className="w-full max-w-6xl min-h-[800px] flex overflow-hidden rounded-xl bg-surface-container-lowest shadow-2xl z-10">
+        
+        <section className="w-full md:w-1/2 flex flex-col p-8 md:p-16 overflow-y-auto">
           <header className="mb-12">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary shadow-lg shadow-primary/20">
-                <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary">
+                <span className="material-symbols-outlined" data-icon="school" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
               </div>
-              <span className="text-2xl font-extrabold tracking-tight text-primary dark:text-indigo-400">Gurukul</span>
+              <span className="text-2xl font-extrabold tracking-tight text-primary">Gurukul</span>
             </div>
           </header>
 
-          <div className="flex-grow max-w-md mx-auto w-full flex flex-col justify-center">
-            {/* Toggle Tab */}
-            <div className="bg-surface-container-low dark:bg-slate-800 p-1 rounded-full flex mb-10 border border-outline-variant/10">
-              <button className="flex-1 py-2 text-sm font-semibold rounded-full bg-surface-container-lowest dark:bg-slate-700 text-primary dark:text-indigo-400 shadow-sm transition-all">Login</button>
-              <button disabled className="flex-1 py-2 text-sm font-medium rounded-full text-on-surface-variant/40 dark:text-slate-500 cursor-not-allowed" title="Registration handled by institution">Register</button>
+          <div className="flex-grow max-w-md mx-auto w-full">
+            <div className="bg-surface-container-low p-1 rounded-full flex mb-10">
+              <button 
+                onClick={() => setMode('login')}
+                className={`flex-1 py-2 text-sm font-semibold rounded-full transition-all ${mode === 'login' ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+              >
+                Login
+              </button>
+              <button 
+                onClick={() => setMode('register')}
+                className={`flex-1 py-2 text-sm font-semibold rounded-full transition-all ${mode === 'register' ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+              >
+                Register
+              </button>
             </div>
 
-            {/* Error Banner */}
             {error && (
-              <div className="mb-6 bg-error-container dark:bg-red-900/30 text-on-error-container dark:text-red-300 p-4 rounded-xl flex items-center gap-3 border border-error/10 animate-in fade-in slide-in-from-top-4">
-                <span className="material-symbols-outlined text-error dark:text-red-400">error</span>
+              <div className="mb-6 bg-error-container text-on-error-container p-4 rounded-xl flex items-center gap-3 border border-error/10">
+                <span className="material-symbols-outlined text-error" data-icon="error">error</span>
                 <p className="text-sm font-medium">{error}</p>
               </div>
             )}
 
-            {/* Identity Intro */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-on-surface dark:text-white tracking-tight mb-2">Welcome back</h1>
-              <p className="text-on-surface-variant dark:text-slate-400 text-sm font-medium">Please enter your details to access your learning portal.</p>
+              <h1 className="text-3xl font-bold text-on-surface tracking-tight mb-2">
+                {mode === 'login' ? 'Welcome back' : 'Create Account'}
+              </h1>
+              <p className="text-on-surface-variant text-sm">
+                {mode === 'login' ? 'Please enter your details to access your learning portal.' : 'Sign up to start your learning journey.'}
+              </p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black uppercase tracking-[2px] text-outline dark:text-slate-500">Institutional Role</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['student', 'teacher', 'admin'].map((r) => (
-                    <label key={r} className="cursor-pointer group">
-                      <input
-                        className="peer sr-only"
-                        name="role"
-                        type="radio"
-                        value={r}
-                        checked={role === r}
-                        onChange={(e) => setRole(e.target.value)}
-                      />
-                      <div className="text-center py-2.5 px-3 rounded-xl border border-outline-variant/30 dark:border-slate-700 peer-checked:border-primary peer-checked:bg-primary-fixed peer-checked:text-on-primary-fixed-variant dark:peer-checked:bg-primary/20 dark:peer-checked:text-indigo-400 transition-all text-xs font-bold uppercase tracking-wider text-on-surface-variant dark:text-slate-400 group-hover:bg-surface-container-low dark:group-hover:bg-slate-800">
-                        {r}
-                      </div>
-                    </label>
-                  ))}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {mode === 'login' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-outline">Institutional Role</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['student', 'teacher', 'admin'].map((r) => (
+                      <label key={r} className="cursor-pointer group">
+                        <input
+                          className="peer sr-only"
+                          name="role"
+                          type="radio"
+                          value={r}
+                          checked={role === r}
+                          onChange={(e) => setRole(e.target.value)}
+                        />
+                        <div className="text-center py-2 px-3 rounded-lg border border-outline-variant peer-checked:border-primary peer-checked:bg-primary-fixed peer-checked:text-on-primary-fixed-variant transition-all text-xs font-medium">
+                          {r.charAt(0).toUpperCase() + r.slice(1)}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {mode === 'register' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="name">Full Name</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="person">person</span>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
+                      id="name"
+                      required
+                      type="text"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-black uppercase tracking-[2px] text-outline dark:text-slate-500" htmlFor="email">Email Address</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="email">Email Address</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline dark:text-slate-500 text-lg">mail</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="mail">mail</span>
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface dark:text-white text-sm font-medium transition-all outline-none"
+                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
                     id="email"
                     name="email"
                     placeholder="name@university.edu"
@@ -122,14 +203,15 @@ export default function Login() {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="block text-[10px] font-black uppercase tracking-[2px] text-outline dark:text-slate-500" htmlFor="password">Security Key</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="password">Security Key</label>
+                  {mode === 'login' && <a className="text-xs font-semibold text-primary hover:underline cursor-not-allowed opacity-50" href="#">Forgot?</a>}
                 </div>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline dark:text-slate-500 text-lg">lock</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="lock">lock</span>
                   <input
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3.5 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface dark:text-white text-sm font-medium transition-all outline-none"
+                    className="w-full pl-12 pr-12 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
                     id="password"
                     name="password"
                     placeholder="••••••••"
@@ -138,104 +220,96 @@ export default function Login() {
                   />
                   <button
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-outline dark:text-slate-500 hover:text-on-surface dark:hover:text-white"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
                     type="button"
                   >
-                    <span className="material-symbols-outlined text-lg">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                    <span className="material-symbols-outlined text-lg" data-icon="visibility">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
               </div>
 
+              {mode === 'register' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-outline" htmlFor="confirmPassword">Confirm Key</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="lock_reset">lock_reset</span>
+                    <input
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-12 pr-12 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none"
+                      id="confirmPassword"
+                      placeholder="••••••••"
+                      required
+                      type={showPassword ? 'text' : 'password'}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 disabled={loading}
-                className="w-full bg-primary dark:bg-indigo-600 text-on-primary py-4 rounded-xl font-bold shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group text-sm uppercase tracking-[3px] disabled:opacity-50"
+                className="w-full bg-primary text-on-primary py-3.5 rounded-xl font-semibold shadow-md shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-75 disabled:cursor-wait"
                 type="submit"
               >
-                <span>{loading ? 'Authenticating...' : 'Sign in to Dashboard'}</span>
+                <span>{mode === 'login' ? 'Sign in to Dashboard' : 'Create Account'}</span>
                 {loading && <div className="animate-spin h-5 w-5 border-2 border-on-primary/30 border-t-on-primary rounded-full"></div>}
-                {!loading && <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>}
               </button>
             </form>
 
             <div className="relative my-10">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-outline-variant/30 dark:border-slate-800"></div></div>
-              <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[4px]"><span className="bg-surface-container-lowest dark:bg-slate-900 px-4 text-outline dark:text-slate-500">Institutional SSO</span></div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-outline-variant/30"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-surface-container-lowest px-4 text-outline font-medium tracking-widest">Or continue with</span></div>
             </div>
 
-            {/* SSO Section */}
-            <div className="grid grid-cols-2 gap-4">
-              <button disabled className="flex flex-col items-center justify-center gap-1 py-3 border border-outline-variant/20 dark:border-slate-800/50 rounded-xl cursor-not-allowed opacity-60">
-                <div className="flex items-center gap-2">
-                  <img alt="Google" className="w-4 h-4 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKZU0VHs_zJzQWqLsF3c88EH220nnt1eaUuuWwLmdmU1b_NWe4vAVphAdGwnYQDGJXXzTn-5lU5GOSVMmbYMQq9DEBdnmkU1yW2HypO3cUARgpvrlBiW3CgK50wpcX77hsKm26EIeUi24o2RcrtRirHG_NzIbCfChxggriTNwkwHhK3uHGlDDTBiwmJbRCw8lUwrCASRmgA6AKuO96quYhDVmawRB48rQRssgU6TezP_LDLM84CwThJPQpq8Zp1yXBPKU3EXfKJew"/>
-                  <span className="text-xs font-bold text-outline dark:text-slate-400 uppercase tracking-widest">Google</span>
-                </div>
-                <span className="text-[9px] font-black text-primary dark:text-indigo-400 uppercase">Coming soon</span>
-              </button>
-              <button disabled className="flex flex-col items-center justify-center gap-1 py-3 border border-outline-variant/20 dark:border-slate-800/50 rounded-xl cursor-not-allowed opacity-60">
-                <div className="flex items-center gap-2">
-                  <img alt="Microsoft" className="w-3.5 h-3.5 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWEx8HHvoTKcg_v54-5_ekE6tZ-_GrjTiwruuh-vZEsz-L-Rtwjse0TsGu1sbRvSC0Vf6j7L0pN4HhcGHPbs-v2z0f3WA-uqudZA97Ay8Jtmg8kYoB5VVmvORY0aIsCwiRILoYDOl3aQZwgg9lqi-1RrylBe1yWkC9JjQ4G3RQKM9AbHs_iOfY9dDybP2u1GzI4SEGfSeIaHy0UfYlGm3mh4DZ_SA73PCxlrGyC-ZJGBhQQBerXFDqL-UP0LeLowBlIUiZzTbMO78"/>
-                  <span className="text-xs font-bold text-outline dark:text-slate-400 uppercase tracking-widest">Azure</span>
-                </div>
-                <span className="text-[9px] font-black text-primary dark:text-indigo-400 uppercase">Coming soon</span>
-              </button>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex justify-center w-full" ref={googleButtonRef}></div>
             </div>
           </div>
 
           <footer className="mt-12 text-center">
-            <p className="text-[10px] font-bold text-on-surface-variant dark:text-slate-500 uppercase tracking-widest">
-              Secured by Gurukul Academic Network Platform
-            </p>
+            <p className="text-xs text-on-surface-variant">By signing in, you agree to our <a className="underline font-medium cursor-not-allowed opacity-50" href="#">Terms of Service</a> and <a className="underline font-medium cursor-not-allowed opacity-50" href="#">Privacy Policy</a>.</p>
           </footer>
         </section>
 
-        {/* Right Pane: Illustrative Content */}
-        <section className="hidden md:flex md:w-1/2 relative bg-primary dark:bg-indigo-950 overflow-hidden transition-colors">
-          {/* Decorative Background Element */}
+        <section className="hidden md:flex md:w-1/2 relative bg-primary overflow-hidden text-on-primary">
           <div className="absolute inset-0 opacity-40 mix-blend-overlay">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-tertiary-fixed rounded-full blur-[120px] -mr-48 -mt-48 animate-pulse"></div>
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-on-primary-fixed-variant rounded-full blur-[100px] -ml-40 -mb-40 animate-pulse delay-700"></div>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-tertiary-fixed rounded-full blur-[120px] -mr-48 -mt-48"></div>
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-on-primary-fixed-variant rounded-full blur-[100px] -ml-40 -mb-40"></div>
           </div>
 
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-16 text-on-primary z-10">
-            {/* Featured Image Card */}
-            <div className="relative w-full aspect-video rounded-3xl overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] mb-12 transform -rotate-2 hover:rotate-0 transition-transform duration-700">
-              <img
-                alt="Academic Excellence"
-                className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQFsvzu7ieFUp5fGWcP7dy4PIabIpzanurSDYHae95HTs0oLvCUoe_nhQ-93PgOhY3HguVSCIUoJji5gd19s0jem41zB9S_e87B8fqt8TaX4gQwTe2s71_eaVLTKkY0UXK7KgDsLPaKSlg4q9YnoJndFAzkKCd3NBjdf7YvoZf-yaGIR9J-EHxxYqmEaxGOHG43yyiGmLwQpgSN-PdQKh6bWFarCcqQIkl6ao5cxM0hxEmp8--aKGI7Y8H4SBilJ1E_XTYP0SFNGw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-              <div className="absolute bottom-6 left-6 flex items-center gap-3">
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-16 z-10">
+            <div className="relative z-10 w-full aspect-video rounded-2xl overflow-hidden shadow-2xl mb-12 transform -rotate-2">
+              <img alt="Academic Excellence" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQFsvzu7ieFUp5fGWcP7dy4PIabIpzanurSDYHae95HTs0oLvCUoe_nhQ-93PgOhY3HguVSCIUoJji5gd19s0jem41zB9S_e87B8fqt8TaX4gQwTe2s71_eaVLTKkY0UXK7KgDsLPaKSlg4q9YnoJndFAzkKCd3NBjdf7YvoZf-yaGIR9J-EHxxYqmEaxGOHG43yyiGmLwQpgSN-PdQKh6bWFarCcqQIkl6ao5cxM0hxEmp8--aKGI7Y8H4SBilJ1E_XTYP0SFNGw" />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent"></div>
+              <div className="absolute bottom-6 left-6 flex items-center gap-2">
                 <div className="flex -space-x-2">
-                  {[1, 2, 3].map(i => (
-                    <img key={i} src={`https://i.pravatar.cc/150?u=${i+10}`} className="w-8 h-8 rounded-full border-2 border-primary ring-2 ring-white/10 shadow-lg" alt="" />
-                  ))}
+                  <div className="w-8 h-8 rounded-full border-2 border-on-primary bg-slate-300 bg-cover bg-center" style={{backgroundImage: "url('https://api.dicebear.com/9.x/notionists/svg?seed=Easton')"}}></div>
+                  <div className="w-8 h-8 rounded-full border-2 border-on-primary bg-slate-400 bg-cover bg-center" style={{backgroundImage: "url('https://api.dicebear.com/9.x/notionists/svg?seed=Chase')"}}></div>
+                  <div className="w-8 h-8 rounded-full border-2 border-on-primary bg-slate-500 bg-cover bg-center" style={{backgroundImage: "url('https://api.dicebear.com/9.x/notionists/svg?seed=Liam')"}}></div>
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-white">+2k scholars active</span>
+                <span className="text-sm font-medium">+2k scholars active</span>
               </div>
             </div>
 
-            <div className="space-y-6 text-center max-w-sm">
-              <h2 className="text-4xl md:text-5xl font-black leading-[1.1] tracking-tighter text-white">Elevate your academic journey.</h2>
-              <p className="text-primary-fixed dark:text-indigo-200 text-lg font-medium opacity-90 leading-relaxed">Gurukul combines ancient wisdom with modern technology to provide an unparalleled learning ecosystem.</p>
+            <div className="relative z-10 space-y-4 text-center max-w-sm">
+              <h2 className="text-4xl font-bold leading-tight">Elevate your academic journey.</h2>
+              <p className="text-primary-fixed text-lg opacity-90">Gurukul combines ancient wisdom with modern technology to provide an unparalleled learning ecosystem.</p>
             </div>
 
-            {/* Floating Stats Bento */}
             <div className="absolute bottom-16 right-16 flex flex-col gap-4">
-              <div className="glass-effect p-6 rounded-[32px] shadow-2xl border border-white/20 flex items-center gap-5 translate-y-0 hover:-translate-y-2 transition-transform cursor-pointer group">
-                <div className="w-12 h-12 rounded-2xl bg-tertiary-fixed text-tertiary flex items-center justify-center shadow-lg group-hover:rotate-12 transition-all">
-                  <span className="material-symbols-outlined font-variation-fill">trending_up</span>
+              <div className="glass-effect p-4 rounded-2xl shadow-xl border border-white/20 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-tertiary-fixed text-tertiary flex items-center justify-center">
+                  <span className="material-symbols-outlined" data-icon="trending_up">trending_up</span>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase font-black text-primary tracking-[2px] mb-1">Global Success</p>
-                  <p className="text-xl font-black text-slate-900">98% Completion</p>
+                  <p className="text-[10px] uppercase font-bold text-primary tracking-widest leading-tight">Global Success</p>
+                  <p className="text-lg font-bold text-on-surface leading-tight">98% Completion</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Abstract Grain Overlay */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03] contrast-125 brightness-110" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6K-59FVcSLfm6Kr0R--QGx29WMd_wFgI0ANuuhZmYBAdzbK6KZwqkwjcI9zON1CGKNVrjP9ZQ0L9AHfYcri_oyElgp7S5iuH9I3dz2k_qCmc2aozJP3TsmYsY-l0lip_04VY6rVVasGb3PZ_lPOxH__Td-XU4tgTotY7Cdmc3WUngCkx7mg7jxzY9G2pxRQy9c1P1hZl49AFP36v4Xa2LMVB2vwN1hsI7R16s251n9RtYLma0lSqS8kpVUAS9zYi47VhSUBaTK2Q')"}}></div>
+          <div className="absolute inset-0 pointer-events-none opacity-20" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6K-59FVcSLfm6Kr0R--QGx29WMd_wFgI0ANuuhZmYBAdzbK6KZwqkwjcI9zON1CGKNVrjP9ZQ0L9AHfYcri_oyElgp7S5iuH9I3dz2k_qCmc2aozJP3TsmYsY-l0lip_04VY6rVVasGb3PZ_lPOxH__Td-XU4tgTotY7Cdmc3WUngCkx7mg7jxzY9G2pxRQy9c1P1hZl49AFP36v4Xa2LMVB2vwN1hsI7R16s251n9RtYLma0lSqS8kpVUAS9zYi47VhSUBaTK2Q')"}}></div>
         </section>
       </main>
     </div>

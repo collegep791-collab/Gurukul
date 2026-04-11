@@ -160,6 +160,12 @@ router.patch('/:id/submissions/:subId/grade', requireAuth, (req, res) => {
 
   const submission = db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.subId);
 
+  // Hook: Increase student progress and credits dynamically when graded
+  if (submission && grade) {
+    const gradeVal = parseInt(grade) || 10; // Fallback to 10 credits if grade isn't a number
+    db.prepare('UPDATE users SET credits = credits + ?, progress = MIN(100, progress + 2) WHERE id = ?').run(gradeVal, submission.student_id);
+  }
+
   // Notify student
   if (req.app.locals.notify && submission) {
     const assignment = db.prepare('SELECT title FROM assignments WHERE id = ?').get(req.params.id);

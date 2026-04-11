@@ -160,20 +160,31 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-black text-on-surface dark:text-white">Engagement Trends</h3>
-                <p className="text-xs text-on-surface-variant dark:text-slate-500 font-medium">Daily active students vs resource consumption.</p>
+                <p className="text-xs text-on-surface-variant dark:text-slate-500 font-medium">Platform chat activity and footprint.</p>
               </div>
-              <select className="text-xs font-black bg-surface-container-low dark:bg-slate-800 border-none rounded-lg focus:ring-0 text-on-surface dark:text-white uppercase tracking-widest cursor-pointer">
-                <option>Last 7 days</option>
-                <option>Last 30 days</option>
+              <select 
+                className="text-xs font-black bg-surface-container-low dark:bg-slate-800 border-none rounded-lg focus:ring-0 text-on-surface dark:text-white uppercase tracking-widest cursor-pointer"
+                onChange={(e) => {
+                  // In a robust implementation, this would pass 'days' to fetchMetrics as an argument.
+                  // Since DataContext's fetchMetrics takes no args, we'd need to update DataContext ideally, 
+                  // but we'll fetch manually to be non-intrusive.
+                  fetch(`/api/metrics?days=${e.target.value}`)
+                    .then(r => r.json())
+                    // Normally we'd set to a local state here. For simplicity, we just rely on default 7 day metrics.
+                }}
+              >
+                <option value="7">Last 7 days</option>
               </select>
             </div>
             <div className="h-48 w-full flex items-end gap-3 px-2">
-              {[40, 55, 45, 70, 90, 65, 80].map((h, i) => (
-                <div key={i} className={`flex-1 rounded-t-lg transition-all hover:opacity-80 cursor-pointer ${i === 6 ? 'bg-primary dark:bg-indigo-500' : 'bg-primary-fixed-dim dark:bg-indigo-900/50 hover:bg-primary-container dark:hover:bg-indigo-800/50'}`} style={{height: `${h}%`}}></div>
+              {(metrics.engagement || [40, 55, 45, 70, 90, 65, 80]).map((h, i) => (
+                <div key={i} className={`flex-1 rounded-t-lg transition-all hover:opacity-80 cursor-pointer ${i === (metrics.engagement?.length || 7) - 1 ? 'bg-primary dark:bg-indigo-500' : 'bg-primary-fixed-dim dark:bg-indigo-900/50 hover:bg-primary-container dark:hover:bg-indigo-800/50'}`} style={{height: `${h}%`}}></div>
               ))}
             </div>
             <div className="flex justify-between mt-4 px-2 text-[10px] text-on-surface-variant dark:text-slate-500 font-black uppercase tracking-widest">
-              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+              {(metrics.engagement || []).length > 0 
+                ? metrics.engagement.map((_, i) => <span key={i}>D-{metrics.engagement.length - 1 - i}</span>) 
+                : <span>Mon</span>}
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@ import settingsRoutes from './routes/settings.js';
 import assignmentRoutes from './routes/assignments.js';
 import notificationRoutes from './routes/notifications.js';
 import auditRoutes from './routes/audit.js';
+import streakRoutes from './routes/streaks.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -94,6 +95,12 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/streaks', streakRoutes);
+
+// ─── Health Check ───
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // ─── Moderation ───
 app.get('/api/moderation', (req, res) => {
@@ -122,16 +129,52 @@ app.patch('/api/moderation/:id', (req, res) => {
 // ─── Metrics ───
 app.get('/api/metrics', (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const days = parseInt(req.query.days) || 7;
+
+  // Real Counts
   const activeUsers = db.prepare("SELECT COUNT(*) as c FROM users WHERE status = 'Active'").get().c;
   const totalResources = db.prepare('SELECT COUNT(*) as c FROM resources').get().c;
-  const totalMessages = db.prepare('SELECT COUNT(*) as c FROM chat_messages').get().c;
-  const totalAssignments = db.prepare('SELECT COUNT(*) as c FROM assignments').get().c;
+  
+  // Real Trends
+  const newUsers = db.prepare(`SELECT COUNT(*) as c FROM users WHERE status = 'Active' AND date_joined >= datetime('now', '-${days} days')`).get().c;
+  const userGrowth = activeUsers > 0 ? ((newUsers / Math.max(1, activeUsers - newUsers)) * 100) : 0;
+  
+  const newResources = db.prepare(`SELECT COUNT(*) as c FROM resources WHERE created_at >= datetime('now', '-${days} days')`).get().c;
+  const resGrowth = totalResources > 0 ? ((newResources / Math.max(1, totalResources - newResources)) * 100) : 0;
+
+  // Real Storage Size (Uploads directory)
+  let dirSize = 0;
+  try {
+    const files = fs.readdirSync(UPLOAD_DIR);
+    files.forEach(file => {
+      const stats = fs.statSync(path.join(UPLOAD_DIR, file));
+      dirSize += stats.size;
+    });
+  } catch (e) {}
+  const mbSize = (dirSize / (1024 * 1024)).toFixed(1);
+  const storagePct = Math.min(100, Math.round((dirSize / (100 * 1024 * 1024 * 1024)) * 100)); // Assume 100GB disk
+
+  // Real Uptime
+  const uptimeHours = (process.uptime() / 3600).toFixed(1);
+
+  // Engagement Chart (Last N Days of Messages)
+  const engagement = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const dateStr = db.prepare(`SELECT date(datetime('now', '-${i} days')) as d`).get().d;
+    const count = db.prepare(`SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = ?`).get(dateStr).c;
+    engagement.push(count);
+  }
+
+  // Normalize engagement to percentages for the bar chart
+  const maxEng = Math.max(...engagement, 10);
+  const engagementPct = engagement.map(val => Math.round((val / maxEng) * 100));
 
   res.json({
-    activeUsers: { val: activeUsers.toLocaleString(), trend: '+12%', pct: 75 },
-    totalResources: { val: totalResources.toLocaleString(), trend: '+8%', pct: 60 },
-    storageUsed: { val: '42.8 GB', trend: 'Local', pct: 42 },
-    systemUptime: { val: '99.98%', trend: 'Healthy', pct: 99 }
+    activeUsers: { val: activeUsers.toLocaleString(), trend: `+${Math.round(userGrowth)}%`, pct: Math.min(100, Math.round(activeUsers / 10)) },
+    totalResources: { val: totalResources.toLocaleString(), trend: `+${Math.round(resGrowth)}%`, pct: Math.min(100, Math.round(totalResources / 10)) },
+    storageUsed: { val: `${mbSize} MB`, trend: 'Local', pct: storagePct === 0 ? 5 : storagePct },
+    systemUptime: { val: `${uptimeHours}h`, trend: 'Healthy', pct: 100 },
+    engagement: engagementPct
   });
 });
 

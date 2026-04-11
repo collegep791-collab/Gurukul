@@ -1,9 +1,12 @@
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
+import BottomNav from './BottomNav';
+import { useData } from '../context/DataContext';
 
 export default function DashboardLayout({ children }) {
+  const { user } = useData();
   return (
-    <div className="bg-surface dark:bg-slate-950 text-on-surface dark:text-slate-100 antialiased min-h-screen transition-colors duration-300 relative overflow-x-hidden">
+    <div className="bg-surface dark:bg-slate-950 text-on-surface dark:text-slate-100 antialiased min-h-screen transition-colors duration-300 relative overflow-x-hidden pb-20 md:pb-0">
       {/* Background Polish */}
       <div className="fixed -z-10 top-0 left-0 w-full h-full pointer-events-none opacity-50">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary-fixed/20 rounded-full blur-[150px]"></div>
@@ -13,10 +16,11 @@ export default function DashboardLayout({ children }) {
       <TopNav />
       <div className="flex min-h-screen pt-16">
         <Sidebar />
-        <main className="flex-1 md:ml-64 p-6 lg:p-8 transition-all duration-300">
+        <main className="flex-1 md:ml-64 p-4 md:p-6 lg:p-8 transition-all duration-300">
           {children}
         </main>
       </div>
+      {user && <BottomNav role={user.role} />}
     </div>
   );
 }

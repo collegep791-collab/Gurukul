@@ -24,8 +24,26 @@ export default function Assignments() {
   const isStudent = user?.role === 'STUDENT';
   const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
 
-  const activeAssignments = assignments.filter(a => a.status === 'Active');
-  const pastAssignments = assignments.filter(a => a.status === 'Closed');
+  const now = new Date().getTime();
+  const { active, past } = assignments.reduce((acc, a) => {
+    if (!a.due_date) return acc; 
+
+    const dueTime = new Date(a.due_date).getTime();
+    const hoursSinceDue = (now - dueTime) / (1000 * 60 * 60);
+    
+    const isGraded = a.my_grade !== null && a.my_grade !== undefined;
+    const isSubmitted = a.my_submission_id !== null && a.my_submission_id !== undefined;
+
+    if (a.status === 'Closed' || isGraded || (hoursSinceDue > 24 && !isSubmitted)) {
+      acc.past.push(a);
+    } else {
+      acc.active.push(a);
+    }
+    return acc;
+  }, { active: [], past: [] });
+
+  const activeAssignments = active;
+  const pastAssignments = past;
 
   const viewSubmissions = async (assignment) => {
     setSelectedAssignment(assignment);

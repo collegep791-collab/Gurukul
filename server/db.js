@@ -147,6 +147,24 @@ db.exec(`
     details TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE INDEX IF NOT EXISTS idx_submissions_lookup ON submissions(assignment_id, student_id);
+
+  CREATE TABLE IF NOT EXISTS user_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    activity_type TEXT NOT NULL,
+    credits_earned INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_activity_user_date ON user_activity(user_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+  CREATE INDEX IF NOT EXISTS idx_resources_category ON resources(category);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_channel ON chat_messages(channel_id);
+  CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
 `);
 
 export default db;

@@ -27,7 +27,7 @@ export default function Notes() {
       setTimeout(() => setSaved(false), 2000);
     } catch {}
     setSaving(false);
-  }, [activeNoteId, editTitle, editContent, editCategory, updateNote]);
+  }, [activeNoteId, editTitle, editContent, editCategory, updateNote, isReadOnly]);
 
   useEffect(() => {
     if (!activeNoteId) return;
@@ -50,16 +50,28 @@ export default function Notes() {
   };
 
   const handleNewNote = async () => {
+    if (user?.role === 'STUDENT') return;
     const note = await createNote({ title: 'Untitled Note', content: '', category: 'General' });
     handleSelectNote(note);
   };
 
   const handleDelete = async () => {
-    if (!activeNoteId) return;
+    if (!activeNoteId || isReadOnly) return;
     await deleteNote(activeNoteId);
     setActiveNoteId(null);
     setEditTitle('');
     setEditContent('');
+  };
+
+  const downloadNote = () => {
+    if (!activeNote) return;
+    const element = document.createElement("a");
+    const file = new Blob([activeNote.content], {type: 'text/markdown'});
+    element.href = URL.createObjectURL(file);
+    element.download = `${activeNote.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
   const filteredNotes = notes.filter(n =>
@@ -77,12 +89,14 @@ export default function Notes() {
           <div className="p-6 border-b border-outline-variant/10 dark:border-slate-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-on-surface dark:text-white tracking-tight">Notes</h2>
-              <button
-                onClick={handleNewNote}
-                className="h-9 w-9 bg-primary dark:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all"
-              >
-                <span className="material-symbols-outlined text-lg">add</span>
-              </button>
+              {user?.role !== 'STUDENT' && (
+                <button
+                  onClick={handleNewNote}
+                  className="h-9 w-9 bg-primary dark:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-95 transition-all"
+                >
+                  <span className="material-symbols-outlined text-lg">add</span>
+                </button>
+              )}
             </div>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline dark:text-slate-500 text-sm">search</span>
@@ -101,11 +115,14 @@ export default function Notes() {
               <div className="text-center py-16">
                 <span className="material-symbols-outlined text-5xl text-outline/20 dark:text-slate-700 mb-4 block">edit_note</span>
                 <p className="text-sm text-on-surface-variant dark:text-slate-500 font-bold">No notes yet</p>
-                <p className="text-xs text-outline dark:text-slate-600 mt-1">Click + to create your first note</p>
+                {user?.role !== 'STUDENT' && (
+                  <p className="text-xs text-outline dark:text-slate-600 mt-1">Click + to create your first note</p>
+                )}
               </div>
             )}
-            {/* My Notes Section */}
-            {filteredNotes.filter(n => n.user_id === user?.id).length > 0 && (
+            
+            {/* My Notes Section - hidden for students */}
+            {user?.role !== 'STUDENT' && filteredNotes.filter(n => n.user_id === user?.id).length > 0 && (
               <>
                 <p className="text-[9px] font-black text-outline dark:text-slate-600 uppercase tracking-[3px] px-2 pt-2 pb-1">My Notes</p>
                 {filteredNotes.filter(n => n.user_id === user?.id).map(note => (
@@ -134,6 +151,7 @@ export default function Notes() {
                 ))}
               </>
             )}
+
             {/* Shared Notes Section */}
             {filteredNotes.filter(n => n.user_id !== user?.id).length > 0 && (
               <>
@@ -205,7 +223,7 @@ export default function Notes() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <span className="px-3 py-1 bg-surface-container-low dark:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-400">
                       View Only
                     </span>
@@ -213,20 +231,31 @@ export default function Notes() {
                   </div>
                 )}
                 
-                {!isReadOnly && (
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${saving ? 'text-primary dark:text-indigo-400' : saved ? 'text-tertiary-fixed' : 'text-outline dark:text-slate-600'}`}>
-                      {saving ? '⟳ Saving...' : saved ? '✓ Saved' : 'Auto-save on'}
-                    </span>
+                <div className="flex items-center gap-3">
+                  {!isReadOnly ? (
+                    <>
+                      <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${saving ? 'text-primary dark:text-indigo-400' : saved ? 'text-tertiary-fixed' : 'text-outline dark:text-slate-600'}`}>
+                        {saving ? '⟳ Saving...' : saved ? '✓ Saved' : 'Auto-save on'}
+                      </span>
+                      <button
+                        onClick={handleDelete}
+                        className="p-2 text-outline dark:text-slate-500 hover:text-error dark:hover:text-red-400 transition-colors rounded-lg"
+                        title="Delete note"
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={handleDelete}
-                      className="p-2 text-outline dark:text-slate-500 hover:text-error dark:hover:text-red-400 transition-colors rounded-lg"
-                      title="Delete note"
+                      onClick={downloadNote}
+                      className="flex items-center gap-2 bg-surface-container-high dark:bg-slate-800 text-on-surface dark:text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:scale-105 active:scale-95 transition-all"
+                      title="Download as Markdown"
                     >
-                      <span className="material-symbols-outlined text-xl">delete</span>
+                      <span className="material-symbols-outlined text-sm">download</span>
+                      Download
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </header>
 
               {/* Title + Content */}
@@ -261,13 +290,15 @@ export default function Notes() {
                   <span className="material-symbols-outlined text-5xl text-outline/30 dark:text-slate-600">edit_note</span>
                 </div>
                 <h3 className="text-2xl font-black text-on-surface dark:text-white mb-3 tracking-tight">Select a Note</h3>
-                <p className="text-sm text-on-surface-variant dark:text-slate-500 mb-8">Choose a note from the sidebar or create a new one.</p>
-                <button
-                  onClick={handleNewNote}
-                  className="bg-primary dark:bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-                >
-                  Create Note
-                </button>
+                <p className="text-sm text-on-surface-variant dark:text-slate-500 mb-8">Choose a note from the sidebar to view{user?.role !== 'STUDENT' && ' or create a new one'}.</p>
+                {user?.role !== 'STUDENT' && (
+                  <button
+                    onClick={handleNewNote}
+                    className="bg-primary dark:bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Create Note
+                  </button>
+                )}
               </div>
             </div>
           )}

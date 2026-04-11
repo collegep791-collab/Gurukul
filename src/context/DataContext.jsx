@@ -56,6 +56,22 @@ export function DataProvider({ children }) {
     return userData;
   }, [syncFromServer]);
 
+  const register = useCallback(async (name, email, password) => {
+    const userData = await api.post('/auth/register', { name, email, password });
+    setUser(userData);
+    return userData;
+  }, []);
+
+  const googleLogin = useCallback(async (credential) => {
+    const userData = await api.post('/auth/google', { credential });
+    setUser(userData);
+    try {
+      const settings = await api.get('/settings');
+      if (settings?.theme) syncFromServer(settings.theme);
+    } catch {}
+    return userData;
+  }, [syncFromServer]);
+
   const logout = useCallback(async () => {
     await api.post('/auth/logout');
     setUser(null);
@@ -309,7 +325,7 @@ export function DataProvider({ children }) {
       // Search
       searchQuery, setSearchQuery,
       // Auth
-      user, setUser, authLoading, login, logout, checkAuth,
+      user, setUser, authLoading, login, register, googleLogin, logout, checkAuth,
       // Resources
       resources, addResource, deleteResource, fetchResources,
       // Users
