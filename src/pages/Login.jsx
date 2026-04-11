@@ -7,8 +7,8 @@ export default function Login() {
   const { login, register, googleLogin, user } = useData();
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(mode === 'login' ? 'aryan@gurukul.edu' : '');
-  const [password, setPassword] = useState(mode === 'login' ? 'password123' : '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('student');
   const [error, setError] = useState('');
