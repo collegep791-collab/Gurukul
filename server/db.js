@@ -167,23 +167,4 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
 `);
 
-// ─── Schema Migrations ───
-// These ensure existing databases are updated without needing manual migrations
-try {
-  const userCols = db.prepare("PRAGMA table_info(users)").all();
-  const hasUsn = userCols.find(c => c.name === 'usn');
-  if (!hasUsn) {
-    db.prepare("ALTER TABLE users ADD COLUMN usn TEXT DEFAULT ''").run();
-    db.prepare("ALTER TABLE users ADD COLUMN class TEXT DEFAULT ''").run();
-    db.prepare("ALTER TABLE users ADD COLUMN section TEXT DEFAULT ''").run();
-  }
-  
-  const chatCols = db.prepare("PRAGMA table_info(chat_channels)").all();
-  if (!chatCols.find(c => c.name === 'created_by')) {
-    db.prepare("ALTER TABLE chat_channels ADD COLUMN created_by INTEGER REFERENCES users(id)").run();
-  }
-} catch (err) {
-  console.error('Migration error:', err);
-}
-
 export default db;

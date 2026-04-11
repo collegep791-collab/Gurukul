@@ -15,7 +15,7 @@ import Assignments from './pages/Assignments';
 import AuditLogs from './pages/AuditLogs';
 import NotFound from './pages/NotFound';
 
-function AuthGuard({ children, requiredRole }) {
+function AuthGuard({ children }) {
   const { user, authLoading } = useData();
 
   if (authLoading) {
@@ -30,11 +30,6 @@ function AuthGuard({ children, requiredRole }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-
-  if (requiredRole && user.role !== requiredRole && user.role !== 'ADMIN') {
-    return <Navigate to={`/${user.role.toLowerCase()}/dashboard`} replace />;
-  }
-
   return children;
 }
 
@@ -43,16 +38,16 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/admin/dashboard" element={<AuthGuard requiredRole="ADMIN"><AdminDashboard /></AuthGuard>} />
-      <Route path="/student/dashboard" element={<AuthGuard requiredRole="STUDENT"><StudentDashboard /></AuthGuard>} />
-      <Route path="/teacher/dashboard" element={<AuthGuard requiredRole="TEACHER"><TeacherDashboard /></AuthGuard>} />
+      <Route path="/admin/dashboard" element={<AuthGuard><AdminDashboard /></AuthGuard>} />
+      <Route path="/student/dashboard" element={<AuthGuard><StudentDashboard /></AuthGuard>} />
+      <Route path="/teacher/dashboard" element={<AuthGuard><TeacherDashboard /></AuthGuard>} />
       <Route path="/resources" element={<AuthGuard><ResourceHub /></AuthGuard>} />
       <Route path="/chat" element={<AuthGuard><Chat /></AuthGuard>} />
-      <Route path="/users" element={<AuthGuard requiredRole="ADMIN"><Users /></AuthGuard>} />
+      <Route path="/users" element={<AuthGuard><Users /></AuthGuard>} />
       <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
       <Route path="/notes" element={<AuthGuard><Notes /></AuthGuard>} />
       <Route path="/assignments" element={<AuthGuard><Assignments /></AuthGuard>} />
-      <Route path="/audit" element={<AuthGuard requiredRole="ADMIN"><AuditLogs /></AuthGuard>} />
+      <Route path="/audit" element={<AuthGuard><AuditLogs /></AuthGuard>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

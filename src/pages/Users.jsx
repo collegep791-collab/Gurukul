@@ -3,23 +3,9 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 
 export default function Users() {
-  const { users, toggleUserSuspend, updateUserRole, createUser } = useData();
+  const { users, toggleUserSuspend, updateUserRole } = useData();
   const [filterRole, setFilterRole] = useState('All');
   const [updating, setUpdating] = useState(null);
-  
-  // Add User Modal State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'STUDENT',
-    usn: '',
-    class: '1st Year',
-    section: 'A'
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleSuspend = async (uid) => {
     setUpdating(uid);
@@ -31,28 +17,6 @@ export default function Users() {
     setUpdating(uid);
     try { await updateUserRole(uid, role); } catch(e) { alert('Failed to update role'); }
     setUpdating(null);
-  };
-
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    // USN Validation for students
-    if (newUser.role === 'STUDENT' && !/^1RL24SCS\d{2}$/i.test(newUser.usn)) {
-      setError('USN must follow the format 1RL24SCSXX (e.g., 1RL24SCS01)');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await createUser(newUser);
-      setShowAddModal(false);
-      setNewUser({ name: '', email: '', password: '', role: 'STUDENT', usn: '', class: '1st Year', section: 'A' });
-    } catch (err) {
-      setError(err.message || 'Failed to create user');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const filteredUsers = filterRole === 'All' 
@@ -69,10 +33,7 @@ export default function Users() {
             Audit institutional roles, manage permissions, and oversee the academic registry.
           </p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-primary dark:bg-indigo-600 text-white flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs"
-        >
+        <button className="bg-primary dark:bg-indigo-600 text-white flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs">
           <span className="material-symbols-outlined text-xl">person_add</span>
           Add New User
         </button>
@@ -113,8 +74,8 @@ export default function Users() {
               <tr className="bg-surface-container-low/50 dark:bg-slate-800/50">
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500">Scholar</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500">Role</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500 hidden md:table-cell">Identity</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500 hidden md:table-cell">Credits</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500 hidden md:table-cell">Streak</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500">Status</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500 hidden lg:table-cell">Joined</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-500 text-right">Actions</th>
@@ -126,7 +87,7 @@ export default function Users() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="relative">
-                        <img src={u.avatar || `https://api.dicebear.com/9.x/notionists/svg?seed=${u.name}`} className="h-10 w-10 rounded-xl object-cover border-2 border-surface-container-low dark:border-slate-800 group-hover:border-primary/20 dark:group-hover:border-indigo-500/20 transition-colors" alt="" />
+                        <img src={u.avatar} className="h-10 w-10 rounded-xl object-cover border-2 border-surface-container-low dark:border-slate-800 group-hover:border-primary/20 dark:group-hover:border-indigo-500/20 transition-colors" alt="" />
                         <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-surface-container-lowest dark:border-slate-900 ${u.status === 'Active' ? 'bg-tertiary-fixed' : u.status === 'Suspended' ? 'bg-error' : 'bg-outline'}`}></span>
                       </div>
                       <div>
@@ -152,13 +113,13 @@ export default function Users() {
                     </select>
                   </td>
                   <td className="px-6 py-4 hidden md:table-cell">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-black text-on-surface dark:text-white uppercase tracking-tighter">{u.usn || 'STAFF'}</p>
-                      <p className="text-[10px] font-bold text-outline dark:text-slate-500 uppercase tracking-widest">{u.class && u.section ? `${u.class} • SEC ${u.section}` : 'N/A'}</p>
-                    </div>
+                    <p className="text-sm font-black text-on-surface dark:text-white">{(u.credits || 0).toLocaleString()}</p>
                   </td>
                   <td className="px-6 py-4 hidden md:table-cell">
-                    <p className="text-sm font-black text-on-surface dark:text-white">{(u.credits || 0).toLocaleString()}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm text-tertiary-fixed">local_fire_department</span>
+                      <p className="text-sm font-bold text-on-surface dark:text-white">{u.streak || 0}</p>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
@@ -167,7 +128,7 @@ export default function Users() {
                     </div>
                   </td>
                   <td className="px-6 py-4 hidden lg:table-cell">
-                    <p className="text-xs font-medium text-on-surface-variant dark:text-slate-400">{u.date_joined ? new Date(u.date_joined).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-xs font-medium text-on-surface-variant dark:text-slate-400">{u.date_joined || 'N/A'}</p>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -207,134 +168,6 @@ export default function Users() {
           </div>
         </div>
       </div>
-
-      {/* Add User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-surface/80 backdrop-blur-md" onClick={() => setShowAddModal(false)}></div>
-          <div className="relative w-full max-w-lg bg-surface-container-lowest dark:bg-slate-900 rounded-3xl shadow-2xl border border-outline-variant/20 overflow-hidden">
-            <div className="p-8 border-b border-outline-variant/10">
-              <h2 className="text-2xl font-black text-on-surface dark:text-white uppercase tracking-tighter">Add Institutional User</h2>
-              <p className="text-on-surface-variant dark:text-slate-400 text-sm font-medium">Create a new scholar or faculty record.</p>
-            </div>
-            
-            <form onSubmit={handleAddUser} className="p-8 space-y-6">
-              {error && (
-                <div className="bg-error-container text-on-error-container p-4 rounded-xl text-xs font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {error}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-outline">Full Name</label>
-                  <input 
-                    required
-                    value={newUser.name}
-                    onChange={e => setNewUser({...newUser, name: e.target.value})}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-outline">Email Address</label>
-                  <input 
-                    required
-                    type="email"
-                    value={newUser.email}
-                    onChange={e => setNewUser({...newUser, email: e.target.value})}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
-                    placeholder="john@gurukul.edu"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-outline">Temporary Password</label>
-                  <input 
-                    required
-                    type="password"
-                    value={newUser.password}
-                    onChange={e => setNewUser({...newUser, password: e.target.value})}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
-                    placeholder="••••••••"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-outline">Assigned Role</label>
-                  <select 
-                    value={newUser.role}
-                    onChange={e => setNewUser({...newUser, role: e.target.value})}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white appearance-none"
-                  >
-                    <option value="STUDENT">Student</option>
-                    <option value="TEACHER">Teacher</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                </div>
-              </div>
-
-              {newUser.role === 'STUDENT' && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-6">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-outline">University Serial Number (USN)</label>
-                    <input 
-                      required
-                      value={newUser.usn}
-                      onChange={e => setNewUser({...newUser, usn: e.target.value})}
-                      className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
-                      placeholder="1RL24SCSXX"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-outline">Current Class</label>
-                      <select 
-                        value={newUser.class}
-                        onChange={e => setNewUser({...newUser, class: e.target.value})}
-                        className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white appearance-none"
-                      >
-                         {["1st Year", "2nd Year", "3rd Year", "4th Year"].map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-outline">Section</label>
-                      <select 
-                        value={newUser.section}
-                        onChange={e => setNewUser({...newUser, section: e.target.value})}
-                        className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:text-white appearance-none"
-                      >
-                        {["A", "B", "C", "D"].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-4 pt-4">
-                <button 
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-outline hover:text-on-surface transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  disabled={loading}
-                  className="flex-[2] bg-primary dark:bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-primary/20 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2"
-                >
-                  {loading ? 'Creating...' : 'Register User'}
-                  {!loading && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }

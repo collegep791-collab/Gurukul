@@ -69,10 +69,8 @@ export function DataProvider({ children }) {
     return handleAuthSuccess(userData);
   }, []);
 
-  const register = useCallback(async (name, email, password, usn, className, section) => {
-    const userData = await api.post('/auth/register', { 
-      name, email, password, usn, class: className, section 
-    });
+  const register = useCallback(async (name, email, password, roleStr) => {
+    const userData = await api.post('/auth/register', { name, email, password, role: roleStr || 'STUDENT' });
     return handleAuthSuccess(userData);
   }, []);
 
@@ -135,20 +133,6 @@ export function DataProvider({ children }) {
     return updated;
   }, []);
 
-  const createUser = useCallback(async (userData) => {
-    const newUser = await api.post('/users', userData);
-    setUsers(prev => [newUser, ...prev]);
-    return newUser;
-  }, []);
-
-  const updateAvatar = useCallback(async (file) => {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    const { avatar } = await api.upload('/users/me/avatar', formData);
-    setUser(prev => ({ ...prev, avatar }));
-    return avatar;
-  }, []);
-
   // ─── Chat ───
   const fetchChannels = useCallback(async () => {
     try {
@@ -175,12 +159,6 @@ export function DataProvider({ children }) {
     setTypingUsers({});
     await fetchMessages(channelId);
   }, [fetchMessages]);
-
-  const createChannel = useCallback(async (channelData) => {
-    const newChannel = await api.post('/chat/channels', channelData);
-    setChannels(prev => [...prev, newChannel]);
-    return newChannel;
-  }, []);
 
   const broadcastTyping = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN && activeChannelId) {
@@ -358,9 +336,9 @@ export function DataProvider({ children }) {
       // Resources
       resources, addResource, deleteResource, fetchResources,
       // Users
-      users, fetchUsers, updateUserRole, toggleUserSuspend, createUser, updateAvatar,
+      users, fetchUsers, updateUserRole, toggleUserSuspend,
       // Chat
-      channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, broadcastTyping, typingUsers, createChannel,
+      channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, broadcastTyping, typingUsers,
       // Notes
       notes, createNote, updateNote, deleteNote, fetchNotes,
       // Assignments

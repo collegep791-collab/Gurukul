@@ -12,11 +12,11 @@ export default function BottomNav({ role }) {
   const base = getBasePath();
 
   const links = [
-    { to: `/${role.toLowerCase()}/dashboard`, icon: 'dashboard', label: 'Home' },
-    { to: `/resources`, icon: 'library_books', label: 'Docs' },
-    { to: `/chat`, icon: 'forum', label: 'Chat' },
-    { to: `/assignments`, icon: 'task', label: 'Tasks' },
-    { to: `/notes`, icon: 'note', label: 'Notes' },
+    { to: `${base}/dashboard`, icon: 'dashboard', label: 'Home' },
+    { to: `${base}/resources`, icon: 'library_books', label: 'Docs' },
+    { to: `${base}/chat`, icon: 'forum', label: 'Chat' },
+    { to: `${base}/assignments`, icon: 'task', label: 'Tasks' },
+    { to: `${base}/notes`, icon: 'note', label: 'Notes' },
   ];
 
   return (
