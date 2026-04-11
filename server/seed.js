@@ -59,6 +59,15 @@ export default function seed() {
     }
   })();
 
+  // ─── Global Chat Channel ───
+  const globalChannelId = db.prepare(`INSERT INTO chat_channels (name, description, type) VALUES ('Campus Hub', 'Global announcements and general chat for all students and faculty.', 'channel')`).run().lastInsertRowid;
+  const insertMember = db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)');
+  db.transaction(() => {
+    for (let i = 1; i <= Object.keys(users).length; i++) {
+      insertMember.run(globalChannelId, i);
+    }
+  })();
+
   // ─── Assignments (15-20 distributed) ───
   const today = new Date();
   const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

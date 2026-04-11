@@ -81,7 +81,7 @@ export default function Login() {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match');
         }
-        await register(name, email, password);
+        await register(name, email, password, role.toUpperCase());
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please check your details.');

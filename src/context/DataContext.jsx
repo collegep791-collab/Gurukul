@@ -33,44 +33,52 @@ export function DataProvider({ children }) {
   const checkAuth = useCallback(async () => {
     try {
       const userData = await api.get('/auth/me');
+      try {
+        const checkin = await api.post('/streaks/checkin');
+        userData.streak = checkin.streak;
+        userData.credits = checkin.credits;
+      } catch {}
+      
       setUser(userData);
       if (userData.settings?.theme) {
         syncFromServer(userData.settings.theme);
       }
-      return userData;
     } catch {
       setUser(null);
-      return null;
     } finally {
       setAuthLoading(false);
     }
   }, [syncFromServer]);
 
   const login = useCallback(async (email, password) => {
-    const userData = await api.post('/auth/login', { email, password });
+  const handleAuthSuccess = async (userData) => {
+    try {
+      const checkin = await api.post('/streaks/checkin');
+      userData.streak = checkin.streak;
+      userData.credits = checkin.credits;
+    } catch {}
     setUser(userData);
     try {
       const settings = await api.get('/settings');
       if (settings?.theme) syncFromServer(settings.theme);
     } catch {}
     return userData;
-  }, [syncFromServer]);
+  };
 
-  const register = useCallback(async (name, email, password) => {
-    const userData = await api.post('/auth/register', { name, email, password });
-    setUser(userData);
-    return userData;
+  const login = useCallback(async (email, password) => {
+    const userData = await api.post('/auth/login', { email, password });
+    return handleAuthSuccess(userData);
+  }, []);
+
+  const register = useCallback(async (name, email, password, roleStr) => {
+    const userData = await api.post('/auth/register', { name, email, password, role: roleStr || 'STUDENT' });
+    return handleAuthSuccess(userData);
   }, []);
 
   const googleLogin = useCallback(async (credential) => {
     const userData = await api.post('/auth/google', { credential });
-    setUser(userData);
-    try {
-      const settings = await api.get('/settings');
-      if (settings?.theme) syncFromServer(settings.theme);
-    } catch {}
-    return userData;
-  }, [syncFromServer]);
+    return handleAuthSuccess(userData);
+  }, []);
 
   const logout = useCallback(async () => {
     await api.post('/auth/logout');

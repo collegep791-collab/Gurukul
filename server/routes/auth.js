@@ -32,7 +32,7 @@ router.post('/login', (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,12 +43,13 @@ router.post('/register', (req, res) => {
   if (existing) return res.status(400).json({ error: 'Email already registered' });
 
   const hash = bcrypt.hashSync(password, 10);
+  const userRole = ['STUDENT', 'TEACHER', 'ADMIN'].includes(role) ? role : 'STUDENT';
   
   try {
     const result = db.prepare(`
       INSERT INTO users (name, email, password_hash, role) 
-      VALUES (?, ?, ?, 'STUDENT')
-    `).run(name.trim(), email.trim().toLowerCase(), hash);
+      VALUES (?, ?, ?, ?)
+    `).run(name.trim(), email.trim().toLowerCase(), hash, userRole);
     
     const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     req.session.userId = newUser.id;
@@ -56,6 +57,11 @@ router.post('/register', (req, res) => {
     // Log activity for streak tracking (assuming user_activity table exists or will exist)
     try {
       db.prepare("INSERT INTO user_activity (user_id, activity_type) VALUES (?, 'login')").run(newUser.id);
+      
+      const globalHub = db.prepare("SELECT id FROM chat_channels WHERE name = 'Campus Hub'").get();
+      if (globalHub) {
+        db.prepare("INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)").run(globalHub.id, newUser.id);
+      }
     } catch (e) {
       // Ignore if table doesn't exist yet
     }
@@ -101,6 +107,11 @@ router.post('/google', async (req, res) => {
     
     try {
       db.prepare("INSERT INTO user_activity (user_id, activity_type) VALUES (?, 'login')").run(user.id);
+      
+      const globalHub = db.prepare("SELECT id FROM chat_channels WHERE name = 'Campus Hub'").get();
+      if (globalHub) {
+        db.prepare("INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)").run(globalHub.id, user.id);
+      }
     } catch (e) {}
 
     const { password_hash: _ph, ...safeUser } = user;
