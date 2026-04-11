@@ -34,6 +34,7 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 seed();
 
 const app = express();
+app.set('trust proxy', 1); // Required for 'secure: true' cookies behind an Nginx proxy 
 const server = createServer(app);
 
 // ─── Security Middleware ───
