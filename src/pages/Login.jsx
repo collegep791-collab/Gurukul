@@ -76,7 +76,7 @@ export default function Login() {
 
     try {
       if (mode === 'login') {
-        await login(email, password);
+        await login(email, password, role.toUpperCase());
       } else {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match');

@@ -64,8 +64,8 @@ export function DataProvider({ children }) {
     return userData;
   };
 
-  const login = useCallback(async (email, password) => {
-    const userData = await api.post('/auth/login', { email, password });
+  const login = useCallback(async (email, password, roleStr) => {
+    const userData = await api.post('/auth/login', { email, password, role: roleStr || 'STUDENT' });
     return handleAuthSuccess(userData);
   }, []);
 

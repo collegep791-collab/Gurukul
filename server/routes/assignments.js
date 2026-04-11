@@ -35,12 +35,13 @@ router.get('/', requireAuth, (req, res) => {
       SELECT a.*, u.name as creator_name, u.avatar as creator_avatar,
         (SELECT COUNT(*) FROM submissions WHERE assignment_id = a.id) as total_submissions,
         (SELECT id FROM submissions WHERE assignment_id = a.id AND student_id = ?) as my_submission_id,
-        (SELECT grade FROM submissions WHERE assignment_id = a.id AND student_id = ?) as my_grade
+        (SELECT grade FROM submissions WHERE assignment_id = a.id AND student_id = ?) as my_grade,
+        (SELECT feedback FROM submissions WHERE assignment_id = a.id AND student_id = ?) as my_feedback
       FROM assignments a
       JOIN users u ON a.created_by = u.id
       WHERE a.status = 'Active'
       ORDER BY a.due_date ASC
-    `).all(req.session.userId, req.session.userId);
+    `).all(req.session.userId, req.session.userId, req.session.userId);
   } else {
     // Teachers/Admins see assignments they created (or all for admin)
     const whereClause = user.role === 'ADMIN' ? '' : 'WHERE a.created_by = ?';
@@ -164,6 +165,9 @@ router.patch('/:id/submissions/:subId/grade', requireAuth, (req, res) => {
   if (submission && grade) {
     const gradeVal = parseInt(grade) || 10; // Fallback to 10 credits if grade isn't a number
     db.prepare('UPDATE users SET credits = credits + ?, progress = MIN(100, progress + 2) WHERE id = ?').run(gradeVal, submission.student_id);
+    try {
+      db.prepare("INSERT INTO user_activity (user_id, activity_type, credits_earned) VALUES (?, 'assignment_grade', ?)").run(submission.student_id, gradeVal);
+    } catch(e) {}
   }
 
   // Notify student

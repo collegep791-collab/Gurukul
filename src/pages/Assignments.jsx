@@ -206,6 +206,14 @@ export default function Assignments() {
                   </button>
                 </div>
               )}
+              {isStudent && a.my_feedback && (
+                <div className="mt-4 pt-3 border-t border-outline-variant/10 dark:border-slate-800">
+                  <p className="text-[11px] text-on-surface-variant dark:text-slate-400 bg-surface-container-low dark:bg-slate-800 p-3 rounded-lg border border-outline-variant/5 dark:border-slate-700">
+                    <strong className="text-primary dark:text-indigo-400 block mb-1">Teacher Remarks:</strong> 
+                    {a.my_feedback}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
 

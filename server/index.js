@@ -34,7 +34,16 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 seed();
 
 const app = express();
-app.set('trust proxy', 1); // Required for 'secure: true' cookies behind an Nginx proxy 
+app.set('trust proxy', 1);
+
+app.locals.auditLog = (actor_id, action, target_type, target_id, details) => {
+  try {
+    db.prepare('INSERT INTO audit_log (actor_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)').run(actor_id, action, target_type, target_id, details);
+  } catch (err) {
+    console.error('Audit Log Error:', err);
+  }
+};
+
 const server = createServer(app);
 
 // ─── Security Middleware ───

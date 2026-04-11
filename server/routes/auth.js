@@ -6,8 +6,8 @@ const router = Router();
 
 // POST /api/auth/login
 router.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const { email, password, role } = req.body;
+  if (!email || !password || !role) return res.status(400).json({ error: 'Email, password, and role required' });
 
   // Input validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,6 +22,11 @@ router.post('/login', (req, res) => {
 
   const valid = bcrypt.compareSync(password, user.password_hash);
   if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
+
+  // Enforce Role
+  if (user.role !== role) {
+    return res.status(403).json({ error: `Account exists but is restricted from this portal. Please select your proper role.` });
+  }
 
   // Store user id in session
   req.session.userId = user.id;
