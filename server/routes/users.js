@@ -2,10 +2,14 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import db from '../db.js';
 
+const uploadDir = path.join(process.cwd(), 'uploads');
+fs.mkdirSync(uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(process.cwd(), 'uploads')),
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => cb(null, `avatar_${Date.now()}_${file.originalname}`)
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
@@ -107,7 +111,7 @@ router.post('/', (req, res) => {
   `).run(name.trim(), email.trim().toLowerCase(), safeHash, safeRole, (usn || '').trim(), (assignClass || '').trim(), (section || '').trim());
 
   const user = db.prepare('SELECT id, name, email, avatar, role, status, credits, streak, progress, date_joined FROM users WHERE id = ?').get(result.lastInsertRowid);
-  
+
   if (req.app.locals.auditLog) {
     req.app.locals.auditLog(req.session.userId, 'user_create', 'user', user.id, `Admin created user: ${user.email} (${user.role})`);
   }
