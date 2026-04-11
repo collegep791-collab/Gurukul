@@ -1,18 +1,18 @@
 import { NavLink } from 'react-router-dom';
 
 export default function BottomNav({ role }) {
-  const getBasePath = () => {
-    return '';
+  const getDashboardPath = () => {
+    if (role === 'ADMIN') return '/admin/dashboard';
+    if (role === 'TEACHER') return '/teacher/dashboard';
+    return '/student/dashboard';
   };
 
-  const base = getBasePath();
-
   const links = [
-    { to: `${base}/dashboard`, icon: 'dashboard', label: 'Home' },
-    { to: `${base}/resources`, icon: 'library_books', label: 'Docs' },
-    { to: `${base}/chat`, icon: 'forum', label: 'Chat' },
-    { to: `${base}/assignments`, icon: 'task', label: 'Tasks' },
-    { to: `${base}/notes`, icon: 'note', label: 'Notes' },
+    { to: getDashboardPath(), icon: 'dashboard', label: 'Home' },
+    { to: '/resources', icon: 'library_books', label: 'Docs' },
+    { to: '/chat', icon: 'forum', label: 'Chat' },
+    { to: '/assignments', icon: 'task', label: 'Tasks' },
+    { to: '/notes', icon: 'note', label: 'Notes' },
   ];
 
   return (

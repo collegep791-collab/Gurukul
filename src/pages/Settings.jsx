@@ -122,14 +122,14 @@ export default function Settings() {
         <div className="flex flex-col lg:flex-row gap-10 items-start">
           {/* Sidebar */}
           <aside className="w-full lg:w-72 flex flex-col gap-8">
-            <nav className="flex flex-col gap-2 bg-surface-container-low dark:bg-slate-900 p-2 rounded-[32px] border border-outline-variant/5 dark:border-slate-800 shadow-sm">
+            <nav className="flex flex-row lg:flex-col gap-2 bg-surface-container-low dark:bg-slate-900 p-2 rounded-3xl lg:rounded-[32px] border border-outline-variant/5 dark:border-slate-800 shadow-sm overflow-x-auto snap-x scrollbar-hide">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-4 px-6 py-4 text-sm font-black rounded-2xl transition-all uppercase tracking-widest ${activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-primary shadow-xl' : 'text-outline dark:text-slate-400 hover:text-on-surface dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'}`}
+                  className={`flex items-center gap-2 lg:gap-4 px-4 lg:px-6 py-3 lg:py-4 text-[10px] lg:text-sm font-black rounded-2xl transition-all uppercase tracking-widest flex-shrink-0 snap-start ${activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-primary shadow-xl' : 'text-outline dark:text-slate-400 hover:text-on-surface dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'}`}
                 >
-                  <span className="material-symbols-outlined text-xl">{tab.icon}</span>
+                  <span className="material-symbols-outlined text-lg lg:text-xl">{tab.icon}</span>
                   {tab.id}
                 </button>
               ))}

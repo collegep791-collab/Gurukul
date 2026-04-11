@@ -12,6 +12,7 @@ export default function Notes() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [view, setView] = useState('list');
   const autoSaveTimer = useRef(null);
 
   const activeNote = notes.find(n => n.id === activeNoteId);
@@ -47,6 +48,7 @@ export default function Notes() {
     setEditContent(note.content);
     setEditCategory(note.category);
     setPreview(note.user_id !== user?.id); // auto-preview if read only
+    setView('note');
   };
 
   const handleNewNote = async () => {
@@ -61,6 +63,7 @@ export default function Notes() {
     setActiveNoteId(null);
     setEditTitle('');
     setEditContent('');
+    setView('list');
   };
 
   const downloadNote = () => {
@@ -85,7 +88,7 @@ export default function Notes() {
       <div className="flex h-[calc(100vh-160px)] bg-surface-container-lowest dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/10 dark:border-slate-800">
         
         {/* Notes List Sidebar */}
-        <aside className="w-80 bg-surface-container-low dark:bg-slate-900/80 border-r border-outline-variant/10 dark:border-slate-800 flex flex-col flex-shrink-0">
+        <aside className={`${view === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-80 bg-surface-container-low dark:bg-slate-900/80 border-r border-outline-variant/10 dark:border-slate-800 flex-col flex-shrink-0`}>
           <div className="p-6 border-b border-outline-variant/10 dark:border-slate-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-on-surface dark:text-white tracking-tight">Notes</h2>
@@ -191,45 +194,50 @@ export default function Notes() {
         </aside>
 
         {/* Editor Area */}
-        <main className="flex-1 flex flex-col bg-white dark:bg-slate-950 overflow-hidden">
+        <main className={`${view === 'note' ? 'flex' : 'hidden'} md:flex flex-1 flex-col bg-white dark:bg-slate-950 overflow-hidden`}>
           {activeNoteId ? (
             <>
               {/* Editor Toolbar */}
-              <header className="h-16 border-b border-outline-variant/10 dark:border-slate-800 flex items-center justify-between px-8 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm flex-shrink-0">
-                {!isReadOnly ? (
-                  <div className="flex items-center gap-4">
-                    <select
-                      value={editCategory}
-                      onChange={(e) => setEditCategory(e.target.value)}
-                      className="bg-surface-container-low dark:bg-slate-800 text-xs font-black text-on-surface dark:text-white uppercase tracking-widest px-4 py-2 rounded-lg border-none outline-none cursor-pointer"
-                    >
-                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-
-                    {/* Edit / Preview Toggle */}
-                    <div className="bg-surface-container-low dark:bg-slate-800 p-0.5 rounded-lg flex">
-                      <button
-                        onClick={() => setPreview(false)}
-                        className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${!preview ? 'bg-white dark:bg-slate-700 text-primary dark:text-indigo-400 shadow-sm' : 'text-outline dark:text-slate-500'}`}
+              <header className="h-16 border-b border-outline-variant/10 dark:border-slate-800 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm flex-shrink-0">
+                <div className="flex items-center gap-2 md:gap-4">
+                  <button onClick={() => setView('list')} className="md:hidden p-2 text-outline hover:text-on-surface">
+                    <span className="material-symbols-outlined">arrow_back</span>
+                  </button>
+                  {!isReadOnly ? (
+                    <>
+                      <select
+                        value={editCategory}
+                        onChange={(e) => setEditCategory(e.target.value)}
+                        className="bg-surface-container-low dark:bg-slate-800 text-xs font-black text-on-surface dark:text-white uppercase tracking-widest px-2 py-2 md:px-4 rounded-lg border-none outline-none cursor-pointer"
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setPreview(true)}
-                        className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${preview ? 'bg-white dark:bg-slate-700 text-primary dark:text-indigo-400 shadow-sm' : 'text-outline dark:text-slate-500'}`}
-                      >
-                        Preview
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 bg-surface-container-low dark:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-400">
-                      View Only
-                    </span>
-                    <span className="text-xs font-bold text-on-surface-variant dark:text-slate-500">Shared by {activeNote.author_name}</span>
-                  </div>
-                )}
+                        {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+  
+                      {/* Edit / Preview Toggle */}
+                      <div className="hidden md:flex bg-surface-container-low dark:bg-slate-800 p-0.5 rounded-lg">
+                        <button
+                          onClick={() => setPreview(false)}
+                          className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${!preview ? 'bg-white dark:bg-slate-700 text-primary dark:text-indigo-400 shadow-sm' : 'text-outline dark:text-slate-500'}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setPreview(true)}
+                          className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${preview ? 'bg-white dark:bg-slate-700 text-primary dark:text-indigo-400 shadow-sm' : 'text-outline dark:text-slate-500'}`}
+                        >
+                          Preview
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden md:inline-block px-3 py-1 bg-surface-container-low dark:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest text-outline dark:text-slate-400">
+                        View Only
+                      </span>
+                      <span className="text-xs font-bold text-on-surface-variant dark:text-slate-500">Shared by {activeNote.author_name}</span>
+                    </>
+                  )}
+                </div>
                 
                 <div className="flex items-center gap-3">
                   {!isReadOnly ? (

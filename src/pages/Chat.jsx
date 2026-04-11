@@ -110,7 +110,7 @@ export default function Chat() {
               {publicChannels.map(ch => (
                 <button
                   key={ch.id}
-                  onClick={() => switchChannel(ch.id)}
+                  onClick={() => { switchChannel(ch.id); setView('chat'); }}
                   className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-3 transition-all ${
                     activeChannelId === ch.id
                       ? 'bg-white dark:bg-slate-800 text-primary dark:text-indigo-400 shadow-sm'
@@ -132,7 +132,7 @@ export default function Chat() {
               {dmChannels.map(ch => (
                 <button
                   key={ch.id}
-                  onClick={() => switchChannel(ch.id)}
+                  onClick={() => { switchChannel(ch.id); setView('chat'); }}
                   className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-3 transition-all ${
                     activeChannelId === ch.id
                       ? 'bg-white dark:bg-slate-800 text-primary dark:text-indigo-400 shadow-sm'
@@ -173,10 +173,13 @@ export default function Chat() {
         </aside>
 
         {/* Chat Feed */}
-        <main className="flex-1 flex flex-col bg-white dark:bg-slate-950 overflow-hidden relative">
+        <main className={`${view === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col bg-white dark:bg-slate-950 overflow-hidden relative`}>
           
-          <header className="h-16 border-b border-outline-variant/10 dark:border-slate-800 flex items-center justify-between px-6 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-10 flex-shrink-0">
-            <div className="flex items-center gap-3">
+          <header className="h-16 border-b border-outline-variant/10 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-10 flex-shrink-0">
+            <div className="flex items-center gap-2 md:gap-3">
+              <button onClick={() => setView('list')} className="md:hidden p-2 text-outline hover:text-on-surface">
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
               <div className="h-9 w-9 bg-primary-fixed dark:bg-primary/20 text-primary dark:text-indigo-400 rounded-xl flex items-center justify-center">
                 <span className="material-symbols-outlined text-lg">{activeChannel?.type === 'dm' ? 'chat_bubble' : 'tag'}</span>
               </div>
