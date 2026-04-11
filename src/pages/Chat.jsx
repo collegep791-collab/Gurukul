@@ -151,6 +151,7 @@ export default function Chat() {
           <div className="p-6 pt-0 flex-1 overflow-y-auto scrollbar-hide">
             <h3 className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-widest mb-4">Members • {channelMembers.length}</h3>
             <div className="space-y-3">
+              {channelMembers.slice(0, 15).map(m => (
                 <button
                   key={m.id}
                   onClick={() => {
