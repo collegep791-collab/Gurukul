@@ -117,7 +117,7 @@ export default function TopNav() {
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 top-12 w-[calc(100vw-32px)] md:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-outline-variant/10 dark:border-slate-800 overflow-hidden z-50 transform -translate-x-4 md:translate-x-0">
+              <div className="fixed top-16 right-4 md:absolute md:top-12 md:right-0 w-[calc(100vw-32px)] md:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-outline-variant/10 dark:border-slate-800 overflow-hidden z-50">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10 dark:border-slate-800">
                   <h4 className="text-sm font-black text-on-surface dark:text-white">Notifications</h4>
                   {unreadCount > 0 && (
@@ -174,7 +174,7 @@ export default function TopNav() {
                   <img alt={user.name} className="h-full w-full object-cover" src={user.avatar} />
                 </button>
                 {showProfileMenu && (
-                  <div className="md:hidden absolute right-0 top-12 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-outline-variant/10 dark:border-slate-800 z-50 overflow-hidden transform origin-top-right transition-all">
+                  <div className="md:hidden fixed top-16 right-4 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-outline-variant/10 dark:border-slate-800 z-50 overflow-hidden transform origin-top-right transition-all">
                     <div className="px-4 py-3 border-b border-outline-variant/10 dark:border-slate-800">
                       <p className="text-xs font-black truncate text-on-surface dark:text-white">{user.name}</p>
                       <p className="text-[10px] text-on-surface-variant dark:text-slate-500 truncate">{user.email}</p>
