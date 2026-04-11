@@ -10,6 +10,9 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [usn, setUsn] = useState('');
+  const [studentClass, setStudentClass] = useState('1st Year');
+  const [section, setSection] = useState('A');
   const [role, setRole] = useState('student');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,7 +84,7 @@ export default function Login() {
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match');
         }
-        await register(name, email, password, role.toUpperCase());
+        await register(name, email, password, usn, studentClass, section);
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please check your details.');
@@ -244,6 +247,44 @@ export default function Login() {
                     />
                   </div>
                 </div>
+              )}
+
+              {mode === 'register' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-outline">University ID (Optional)</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-lg" data-icon="badge">badge</span>
+                      <input
+                        value={usn}
+                        onChange={(e) => setUsn(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none uppercase"
+                        placeholder="e.g. 1RL24SCS01"
+                        type="text"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-outline">Class</label>
+                      <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none">
+                        <option>1st Year</option>
+                        <option>2nd Year</option>
+                        <option>3rd Year</option>
+                        <option>4th Year</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-outline">Section</label>
+                      <select value={section} onChange={e => setSection(e.target.value)} className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary/20 text-on-surface text-sm transition-all outline-none">
+                        <option>A</option>
+                        <option>B</option>
+                        <option>C</option>
+                        <option>D</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
               )}
 
               <button

@@ -20,6 +20,36 @@ router.get('/channels', (req, res) => {
   res.json(channels);
 });
 
+// POST /api/chat/channels — create class group and auto-enroll
+router.post('/channels', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const caller = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
+  if (caller?.role === 'STUDENT') return res.status(403).json({ error: 'Students cannot create channels' });
+
+  const { name, description, class: targetClass, section } = req.body;
+  if (!name) return res.status(400).json({ error: 'Channel name required' });
+  
+  const result = db.prepare('INSERT INTO chat_channels (name, description, type, created_by) VALUES (?, ?, ?, ?)').run(
+    name.trim(), (description || '').trim(), 'channel', req.session.userId
+  );
+  const newChannelId = result.lastInsertRowid;
+
+  // Add the creator
+  db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)').run(newChannelId, req.session.userId);
+
+  // Auto-enroll all matching students if target class and section are provided
+  if (targetClass && section) {
+    const students = db.prepare('SELECT id FROM users WHERE role = ? AND class = ? AND section = ? AND status = ?').all('STUDENT', targetClass, section, 'Active');
+    const insertMember = db.prepare('INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)');
+    students.forEach(s => {
+      if (s.id !== req.session.userId) insertMember.run(newChannelId, s.id);
+    });
+  }
+
+  const channel = db.prepare('SELECT *, 1 as member_count FROM chat_channels WHERE id = ?').get(newChannelId);
+  res.status(201).json(channel);
+});
+
 // GET /api/chat/channels/:id/messages?before=<id>&limit=50
 router.get('/channels/:id/messages', (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });

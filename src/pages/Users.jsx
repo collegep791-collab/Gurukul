@@ -3,9 +3,13 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 
 export default function Users() {
-  const { users, toggleUserSuspend, updateUserRole } = useData();
+  const { users, toggleUserSuspend, updateUserRole, createUser, fetchUsers } = useData();
   const [filterRole, setFilterRole] = useState('All');
   const [updating, setUpdating] = useState(null);
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'STUDENT', usn: '', class: '1st Year', section: 'A' });
+  const [addingUser, setAddingUser] = useState(false);
 
   const handleSuspend = async (uid) => {
     setUpdating(uid);
@@ -23,6 +27,20 @@ export default function Users() {
     ? users 
     : users.filter(u => u.role === filterRole.toUpperCase());
 
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    setAddingUser(true);
+    try {
+      await createUser(addForm);
+      await fetchUsers();
+      setShowAddModal(false);
+      setAddForm({ name: '', email: '', password: '', role: 'STUDENT', usn: '', class: '1st Year', section: 'A' });
+    } catch(err) {
+      alert('Failed to add user: ' + (err.message || err.error || 'Unknown error'));
+    }
+    setAddingUser(false);
+  };
+
   return (
     <DashboardLayout>
       {/* Header Section */}
@@ -33,7 +51,10 @@ export default function Users() {
             Audit institutional roles, manage permissions, and oversee the academic registry.
           </p>
         </div>
-        <button className="bg-primary dark:bg-indigo-600 text-white flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs">
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="bg-primary dark:bg-indigo-600 text-white flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs"
+        >
           <span className="material-symbols-outlined text-xl">person_add</span>
           Add New User
         </button>
@@ -168,6 +189,46 @@ export default function Users() {
           </div>
         </div>
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl p-6 md:p-8 animate-in fade-in zoom-in duration-200 border border-outline-variant/10 dark:border-slate-800">
+            <h2 className="text-2xl font-black text-on-surface dark:text-white mb-6">Create New User</h2>
+            <form onSubmit={handleAddSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input value={addForm.name} onChange={e => setAddForm({...addForm, name: e.target.value})} placeholder="Full Name" required className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white" />
+                <input value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} type="email" placeholder="Email" required className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input value={addForm.password} onChange={e => setAddForm({...addForm, password: e.target.value})} placeholder="Password (min 6)" required className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white" />
+                <select value={addForm.role} onChange={e => setAddForm({...addForm, role: e.target.value})} className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white">
+                  <option value="STUDENT">Student</option>
+                  <option value="TEACHER">Teacher</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              <div className="pt-2 border-t border-outline-variant/10 dark:border-slate-800">
+                <p className="text-xs font-bold text-outline dark:text-slate-500 uppercase tracking-widest mb-3">Academic Info</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <input value={addForm.usn} onChange={e => setAddForm({...addForm, usn: e.target.value})} placeholder="USN" className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white" />
+                  <select value={addForm.class} onChange={e => setAddForm({...addForm, class: e.target.value})} className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white">
+                    <option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option>
+                  </select>
+                  <select value={addForm.section} onChange={e => setAddForm({...addForm, section: e.target.value})} className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 rounded-xl text-sm border-none outline-none focus:ring-2 focus:ring-primary/20 dark:text-white">
+                    <option>A</option><option>B</option><option>C</option><option>D</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 rounded-xl font-bold text-sm bg-surface-container-high dark:bg-slate-800 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                <button type="submit" disabled={addingUser} className="flex-1 px-4 py-3 rounded-xl font-black uppercase tracking-widest text-xs bg-primary dark:bg-indigo-600 text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center">
+                  {addingUser ? 'Saving...' : 'Create Record'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

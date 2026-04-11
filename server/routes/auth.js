@@ -37,8 +37,12 @@ router.post('/login', (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, usn, class: studentClass, section } = req.body;
+  
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
+
+  // Optional: basic validation on USN here. The user requested flexible format, so no strict format check is needed.
+  if (usn && usn.length < 3) return res.status(400).json({ error: 'USN must be at least 3 characters if provided' });
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' });
@@ -48,13 +52,13 @@ router.post('/register', (req, res) => {
   if (existing) return res.status(400).json({ error: 'Email already registered' });
 
   const hash = bcrypt.hashSync(password, 10);
-  const userRole = ['STUDENT', 'TEACHER', 'ADMIN'].includes(role) ? role : 'STUDENT';
+  const userRole = 'STUDENT'; // Force to STUDENT securely
   
   try {
     const result = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role) 
-      VALUES (?, ?, ?, ?)
-    `).run(name.trim(), email.trim().toLowerCase(), hash, userRole);
+      INSERT INTO users (name, email, password_hash, role, usn, class, section) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(name.trim(), email.trim().toLowerCase(), hash, userRole, (usn || '').trim(), (studentClass || '').trim(), (section || '').trim());
     
     const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     req.session.userId = newUser.id;

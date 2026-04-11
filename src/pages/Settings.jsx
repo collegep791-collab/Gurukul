@@ -13,6 +13,7 @@ export default function Settings() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [profileMsg, setProfileMsg] = useState('');
+  const fileRef = useRef(null);
 
   // Security
   const [twoFactor, setTwoFactor] = useState(true);
@@ -46,6 +47,30 @@ export default function Settings() {
       setTimeout(() => setProfileMsg(''), 3000);
     } catch (err) {
       setProfileMsg(err.message || 'Failed to save profile.');
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setProfileMsg('Uploading avatar...');
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/users/me/avatar', {
+        method: 'PATCH',
+        body: formData,
+        // Don't set Content-Type, fetch handles multipart/form-data with boundaries automatically
+      });
+      if (!response.ok) throw new Error('Upload failed');
+      const updated = await response.json();
+      if (setUser) setUser(updated);
+      setProfileMsg('✓ Avatar updated!');
+      setTimeout(() => setProfileMsg(''), 3000);
+    } catch (err) {
+      setProfileMsg(err.message || 'Failed to update avatar.');
     }
   };
 
@@ -125,7 +150,8 @@ export default function Settings() {
                 <div className="flex items-center gap-10 p-8 bg-surface-container-low/40 dark:bg-slate-800/40 rounded-[32px]">
                   <div className="relative group">
                     <img className="w-28 h-28 rounded-[28px] object-cover ring-8 ring-white dark:ring-slate-900 shadow-2xl" src={user.avatar} alt={user.name} />
-                    <button className="absolute -bottom-2 -right-2 bg-primary text-white h-10 w-10 rounded-xl border-4 border-white dark:border-slate-900 shadow-xl flex items-center justify-center hover:scale-110 transition-all">
+                    <input type="file" className="hidden" ref={fileRef} accept="image/*" onChange={handleAvatarUpload} />
+                    <button onClick={() => fileRef.current?.click()} className="absolute -bottom-2 -right-2 bg-primary text-white h-10 w-10 rounded-xl border-4 border-white dark:border-slate-900 shadow-xl flex items-center justify-center hover:scale-110 transition-all">
                       <span className="material-symbols-outlined text-lg">photo_camera</span>
                     </button>
                   </div>

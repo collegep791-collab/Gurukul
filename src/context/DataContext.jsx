@@ -69,9 +69,13 @@ export function DataProvider({ children }) {
     return handleAuthSuccess(userData);
   }, []);
 
-  const register = useCallback(async (name, email, password, roleStr) => {
-    const userData = await api.post('/auth/register', { name, email, password, role: roleStr || 'STUDENT' });
+  const register = useCallback(async (name, email, password, usn, studentClass, section) => {
+    const userData = await api.post('/auth/register', { name, email, password, usn, class: studentClass, section });
     return handleAuthSuccess(userData);
+  }, []);
+
+  const createUser = useCallback(async (payload) => {
+    return await api.post('/users', payload);
   }, []);
 
   const googleLogin = useCallback(async (credential) => {
@@ -143,6 +147,12 @@ export function DataProvider({ children }) {
       }
     } catch {}
   }, [activeChannelId]);
+
+  const createChannel = useCallback(async (payload) => {
+    const channel = await api.post('/chat/channels', payload);
+    setChannels(prev => [...prev, channel]);
+    return channel;
+  }, []);
 
   const fetchMessages = useCallback(async (channelId) => {
     if (!channelId) return;
@@ -336,9 +346,9 @@ export function DataProvider({ children }) {
       // Resources
       resources, addResource, deleteResource, fetchResources,
       // Users
-      users, fetchUsers, updateUserRole, toggleUserSuspend,
+      users, fetchUsers, updateUserRole, toggleUserSuspend, createUser,
       // Chat
-      channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, broadcastTyping, typingUsers,
+      channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, createChannel, broadcastTyping, typingUsers,
       // Notes
       notes, createNote, updateNote, deleteNote, fetchNotes,
       // Assignments

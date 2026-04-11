@@ -4,13 +4,22 @@ import { useData } from '../context/DataContext';
 import api from '../lib/api';
 
 export default function Chat() {
-  const { user, channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, broadcastTyping, typingUsers } = useData();
+  const { user, channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, createChannel, broadcastTyping, typingUsers } = useData();
   const [inputMsg, setInputMsg] = useState('');
   const [channelMembers, setChannelMembers] = useState([]);
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const messagesEndRef = useRef(null);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createData, setCreateData] = useState({
+    name: '',
+    description: '',
+    class: '',
+    section: ''
+  });
+  const [createLoading, setCreateLoading] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,6 +62,20 @@ export default function Chat() {
     setLoadingOlder(false);
   };
 
+  const handleCreateChannel = async (e) => {
+    e.preventDefault();
+    setCreateLoading(true);
+    try {
+      await createChannel(createData);
+      setShowCreateModal(false);
+      setCreateData({ name: '', description: '', class: '', section: '' });
+    } catch (err) {
+      alert('Failed to create channel: ' + (err.message || 'Unknown error'));
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const activeChannel = channels.find(c => c.id === activeChannelId);
   const publicChannels = channels.filter(c => c.type === 'channel');
   const dmChannels = channels.filter(c => c.type === 'dm');
@@ -62,14 +85,27 @@ export default function Chat() {
   if (typingUserList.length === 1) typingText = `${typingUserList[0].name} is typing...`;
   else if (typingUserList.length > 1) typingText = 'Several people are typing...';
 
+  const [view, setView] = useState('list'); // Mobile compatibility
+
   return (
     <DashboardLayout>
       <div className="flex h-[calc(100vh-160px)] bg-surface-container-lowest dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/10 dark:border-slate-800">
         
         {/* Channel Sidebar */}
-        <aside className="hidden md:flex w-64 bg-surface-container-low dark:bg-slate-900/80 border-r border-outline-variant/10 dark:border-slate-800 flex-col flex-shrink-0">
+        <aside className={`${view === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-64 bg-surface-container-low dark:bg-slate-900/80 border-r border-outline-variant/10 dark:border-slate-800 flex-col flex-shrink-0`}>
           <div className="p-6">
-            <h2 className="text-xl font-black text-on-surface dark:text-white tracking-tight mb-6">Channels</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black text-on-surface dark:text-white tracking-tight">Channels</h2>
+              {(user?.role === 'ADMIN' || user?.role === 'TEACHER') && (
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="h-8 w-8 bg-primary dark:bg-indigo-600 text-white rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-md shadow-primary/20"
+                  title="Create Class Group"
+                >
+                  <span className="material-symbols-outlined text-lg">add</span>
+                </button>
+              )}
+            </div>
             <div className="space-y-1">
               {publicChannels.map(ch => (
                 <button
@@ -288,6 +324,52 @@ export default function Chat() {
           </div>
         </aside>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl p-6 border border-outline-variant/10 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-2xl font-black text-on-surface dark:text-white mb-6">Create Class Group</h2>
+            <form onSubmit={handleCreateChannel} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-outline dark:text-slate-500 mb-2 block">Group Name</label>
+                <input required value={createData.name} onChange={e => setCreateData({...createData, name: e.target.value})} placeholder="e.g. 3rd Year AI Squad" className="w-full px-4 py-3 rounded-xl bg-surface-container-low dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary/20 outline-none text-sm dark:text-white" />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-outline dark:text-slate-500 mb-2 block">Description (Optional)</label>
+                <input value={createData.description} onChange={e => setCreateData({...createData, description: e.target.value})} placeholder="What is this group for?" className="w-full px-4 py-3 rounded-xl bg-surface-container-low dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary/20 outline-none text-sm dark:text-white" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-widest text-outline dark:text-slate-500 mb-2 block">Assign to Class</label>
+                  <select value={createData.class} onChange={e => setCreateData({...createData, class: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-surface-container-low dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary/20 outline-none text-sm dark:text-white">
+                    <option value="">None (Invite Only)</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-widest text-outline dark:text-slate-500 mb-2 block">Assign to Section</label>
+                  <select value={createData.section} onChange={e => setCreateData({...createData, section: e.target.value})} disabled={!createData.class} className="w-full px-4 py-3 rounded-xl bg-surface-container-low dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary/20 outline-none text-sm dark:text-white disabled:opacity-50">
+                    <option value="">Specific Section...</option>
+                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-[10px] font-medium text-outline pt-2">
+                * If class and section are selected, all matching students will be automatically enrolled in this group.
+              </p>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-surface-container-high dark:bg-slate-800 hover:bg-surface-container-highest transition-colors text-sm">Cancel</button>
+                <button type="submit" disabled={createLoading} className="flex-1 py-3 rounded-xl font-black uppercase text-xs tracking-widest bg-primary dark:bg-indigo-600 text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                  {createLoading ? 'Creating...' : 'Create Group'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

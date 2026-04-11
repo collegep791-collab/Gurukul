@@ -1,8 +1,28 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import multer from 'multer';
+import path from 'path';
 import db from '../db.js';
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(process.cwd(), 'uploads')),
+  filename: (req, file, cb) => cb(null, `avatar_${Date.now()}_${file.originalname}`)
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
+
 const router = Router();
+
+// PATCH /api/users/me/avatar
+router.patch('/me/avatar', upload.single('avatar'), (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const avatarUrl = `/uploads/${req.file.filename}`;
+  db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatarUrl, req.session.userId);
+
+  const user = db.prepare('SELECT id, name, email, avatar, role, status, credits, streak, progress, date_joined FROM users WHERE id = ?').get(req.session.userId);
+  res.json(user);
+});
 
 // PATCH /api/users/me — update own profile (name, email)
 router.patch('/me', (req, res) => {
@@ -63,6 +83,36 @@ router.get('/', (req, res) => {
   sql += ' ORDER BY name ASC';
   const users = db.prepare(sql).all(...params);
   res.json(users);
+});
+
+// POST /api/users
+router.post('/', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const caller = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
+  if (caller?.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
+
+  const { name, email, password, role, usn, class: assignClass, section } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: 'Full Name, email, and password required' });
+
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.trim().toLowerCase());
+  if (existing) return res.status(409).json({ error: 'Email already exists' });
+
+  const safeRole = ['STUDENT', 'TEACHER', 'ADMIN'].includes(role) ? role : 'STUDENT';
+  const safeHash = bcrypt.hashSync(password, 10);
+
+  const result = db.prepare(`
+    INSERT INTO users (name, email, password_hash, role, usn, class, section, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
+  `).run(name.trim(), email.trim().toLowerCase(), safeHash, safeRole, (usn || '').trim(), (assignClass || '').trim(), (section || '').trim());
+
+  const user = db.prepare('SELECT id, name, email, avatar, role, status, credits, streak, progress, date_joined FROM users WHERE id = ?').get(result.lastInsertRowid);
+  
+  if (req.app.locals.auditLog) {
+    req.app.locals.auditLog(req.session.userId, 'user_create', 'user', user.id, `Admin created user: ${user.email} (${user.role})`);
+  }
+
+  res.status(201).json(user);
 });
 
 // PATCH /api/users/:id

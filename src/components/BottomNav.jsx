@@ -2,11 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 export default function BottomNav({ role }) {
   const getBasePath = () => {
-    switch (role) {
-      case 'ADMIN': return '/admin';
-      case 'TEACHER': return '/teacher';
-      default: return '/student';
-    }
+    return '';
   };
 
   const base = getBasePath();
