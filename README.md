@@ -33,9 +33,7 @@ Then open **http://localhost:3001**
 
 | Role    | Email              | Password      |
 | ------- | ------------------ | ------------- |
-| Student | aryan@gurukul.edu  | password123   |
-| Admin   | elena@gurukul.edu  | password123   |
-| Teacher | sarah@gurukul.edu  | password123   |
+| Student | aryan@gurukul.edu  | password123   | |
 
 ## Features
 
