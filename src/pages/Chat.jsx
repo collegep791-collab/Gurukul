@@ -20,6 +20,9 @@ export default function Chat() {
     section: ''
   });
   const [createLoading, setCreateLoading] = useState(false);
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [chatSearchTerm, setChatSearchTerm] = useState('');
+  const [showInfo, setShowInfo] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,7 +92,7 @@ export default function Chat() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-160px)] bg-surface-container-lowest dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/10 dark:border-slate-800">
+      <div className="flex h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] bg-surface-container-lowest dark:bg-slate-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/10 dark:border-slate-800">
         
         {/* Channel Sidebar */}
         <aside className={`${view === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-64 bg-surface-container-low dark:bg-slate-900/80 border-r border-outline-variant/10 dark:border-slate-800 flex-col flex-shrink-0`}>
@@ -191,10 +194,41 @@ export default function Chat() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="p-2 text-outline dark:text-slate-400 hover:text-on-surface dark:hover:text-white transition-colors rounded-lg"><span className="material-symbols-outlined">search</span></button>
-              <button className="p-2 text-outline dark:text-slate-400 hover:text-on-surface dark:hover:text-white transition-colors rounded-lg"><span className="material-symbols-outlined">info</span></button>
+              <button onClick={() => { setShowChatSearch(!showChatSearch); setChatSearchTerm(''); }} className={`p-2 transition-colors rounded-lg ${showChatSearch ? 'text-primary dark:text-indigo-400 bg-primary-fixed/30 dark:bg-indigo-900/30' : 'text-outline dark:text-slate-400 hover:text-on-surface dark:hover:text-white'}`}><span className="material-symbols-outlined">search</span></button>
+              <button onClick={() => setShowInfo(!showInfo)} className={`p-2 transition-colors rounded-lg ${showInfo ? 'text-primary dark:text-indigo-400 bg-primary-fixed/30 dark:bg-indigo-900/30' : 'text-outline dark:text-slate-400 hover:text-on-surface dark:hover:text-white'}`}><span className="material-symbols-outlined">info</span></button>
             </div>
           </header>
+
+          {/* Chat Search Bar */}
+          {showChatSearch && (
+            <div className="px-4 py-2 bg-surface-container-low/50 dark:bg-slate-800/50 border-b border-outline-variant/10 dark:border-slate-800 flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm text-outline dark:text-slate-500">search</span>
+              <input
+                autoFocus
+                value={chatSearchTerm}
+                onChange={(e) => setChatSearchTerm(e.target.value)}
+                placeholder="Search messages..."
+                className="flex-1 bg-transparent text-sm outline-none dark:text-white dark:placeholder-slate-500"
+              />
+              {chatSearchTerm && <span className="text-[10px] font-bold text-outline dark:text-slate-500">{messages.filter(m => m.text.toLowerCase().includes(chatSearchTerm.toLowerCase())).length} found</span>}
+            </div>
+          )}
+
+          {/* Channel Info Panel */}
+          {showInfo && (
+            <div className="px-4 py-3 bg-surface-container-low/50 dark:bg-slate-800/50 border-b border-outline-variant/10 dark:border-slate-800">
+              <p className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-widest mb-2">Members ({channelMembers.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {channelMembers.slice(0, 10).map(m => (
+                  <div key={m.id} className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 rounded-full">
+                    <img src={m.avatar} className="w-5 h-5 rounded-full" alt="" />
+                    <span className="text-[10px] font-bold text-on-surface dark:text-slate-300">{m.name}</span>
+                  </div>
+                ))}
+                {channelMembers.length > 10 && <span className="text-[10px] font-bold text-outline dark:text-slate-500 self-center">+{channelMembers.length - 10} more</span>}
+              </div>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
@@ -226,8 +260,9 @@ export default function Chat() {
 
             {messages.map((msg) => {
               const isMe = msg.sender_id === user?.id;
+              const isMatch = showChatSearch && chatSearchTerm && msg.text.toLowerCase().includes(chatSearchTerm.toLowerCase());
               return (
-                <div key={msg.id} className={`flex gap-4 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
+                <div key={msg.id} className={`flex gap-4 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : ''} ${isMatch ? 'ring-2 ring-primary/40 dark:ring-indigo-400/40 rounded-2xl' : ''} ${showChatSearch && chatSearchTerm && !isMatch ? 'opacity-30' : ''} transition-all`}>
                   {!isMe && <img src={msg.sender_avatar} className="w-10 h-10 rounded-2xl flex-shrink-0 border-2 border-surface-container-low dark:border-slate-800" alt="" />}
                   <div className={`flex flex-col ${isMe ? 'items-end' : ''}`}>
                     {!isMe && (
@@ -258,7 +293,7 @@ export default function Chat() {
           </div>
 
           {/* Input */}
-          <footer className="p-6 bg-white dark:bg-slate-950 border-t border-outline-variant/10 dark:border-slate-800 flex-shrink-0 relative">
+          <footer className="p-3 sm:p-4 md:p-6 bg-white dark:bg-slate-950 border-t border-outline-variant/10 dark:border-slate-800 flex-shrink-0 relative">
             {typingText && (
               <div className="absolute -top-6 left-8 text-[10px] font-black text-primary dark:text-indigo-400 uppercase tracking-widest animate-pulse">
                 {typingText}

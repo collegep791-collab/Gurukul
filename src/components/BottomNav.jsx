@@ -16,29 +16,29 @@ export default function BottomNav({ role }) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-effect border-t border-outline-variant/30 z-50 px-2 pb-safe pt-2">
-      <ul className="flex justify-around items-center h-16">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-outline-variant/20 dark:border-slate-800" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <ul className="flex justify-around items-center h-16 px-1">
         {links.map((link) => (
           <li key={link.to} className="flex-1">
             <NavLink
               to={link.to}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
-                  isActive ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
+                `flex flex-col items-center justify-center w-full h-full gap-0.5 transition-all duration-200 ${
+                  isActive ? 'text-primary dark:text-indigo-400' : 'text-on-surface-variant dark:text-slate-500 hover:text-on-surface'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <div className={`px-4 py-1 rounded-full transition-all ${isActive ? 'bg-primary-fixed/20' : ''}`}>
+                  <div className={`px-4 py-1 rounded-full transition-all duration-300 ${isActive ? 'bg-primary-fixed/30 dark:bg-indigo-900/40 scale-110' : ''}`}>
                     <span 
-                      className="material-symbols-outlined text-[24px]" 
+                      className="material-symbols-outlined text-[22px]" 
                       style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                     >
                       {link.icon}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>
+                  <span className={`text-[10px] leading-tight ${isActive ? 'font-bold' : 'font-medium'}`}>
                     {link.label}
                   </span>
                 </>

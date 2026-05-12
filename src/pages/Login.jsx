@@ -102,9 +102,9 @@ export default function Login() {
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-secondary-container/20 rounded-full blur-[150px]"></div>
       </div>
 
-      <main className="w-full max-w-6xl min-h-[800px] flex overflow-hidden rounded-xl bg-surface-container-lowest shadow-2xl z-10">
+      <main className="w-full max-w-6xl flex flex-col md:flex-row overflow-hidden rounded-xl bg-surface-container-lowest shadow-2xl z-10">
         
-        <section className="w-full md:w-1/2 flex flex-col p-8 md:p-16 overflow-y-auto">
+        <section className="w-full md:w-1/2 flex flex-col p-6 sm:p-8 md:p-12 lg:p-16 overflow-y-auto order-2 md:order-1">
           <header className="mb-12">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary">
@@ -312,13 +312,27 @@ export default function Login() {
           </footer>
         </section>
 
-        <section className="hidden md:flex md:w-1/2 relative bg-primary overflow-hidden text-on-primary">
+        {/* Hero Section — compact on mobile, full panel on desktop */}
+        <section className="relative bg-primary overflow-hidden text-on-primary md:w-1/2 order-1 md:order-2">
+          {/* Background blurs */}
           <div className="absolute inset-0 opacity-40 mix-blend-overlay">
             <div className="absolute top-0 right-0 w-96 h-96 bg-tertiary-fixed rounded-full blur-[120px] -mr-48 -mt-48"></div>
             <div className="absolute bottom-0 left-0 w-80 h-80 bg-on-primary-fixed-variant rounded-full blur-[100px] -ml-40 -mb-40"></div>
           </div>
 
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-16 z-10">
+          {/* Mobile: compact hero */}
+          <div className="md:hidden relative z-10 flex items-center gap-4 p-6">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 border-2 border-white/20">
+              <img alt="Academic Excellence" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQFsvzu7ieFUp5fGWcP7dy4PIabIpzanurSDYHae95HTs0oLvCUoe_nhQ-93PgOhY3HguVSCIUoJji5gd19s0jem41zB9S_e87B8fqt8TaX4gQwTe2s71_eaVLTKkY0UXK7KgDsLPaKSlg4q9YnoJndFAzkKCd3NBjdf7YvoZf-yaGIR9J-EHxxYqmEaxGOHG43yyiGmLwQpgSN-PdQKh6bWFarCcqQIkl6ao5cxM0hxEmp8--aKGI7Y8H4SBilJ1E_XTYP0SFNGw" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold leading-tight">Elevate your academic journey.</h2>
+              <p className="text-primary-fixed text-xs opacity-80 mt-0.5">Ancient wisdom meets modern technology.</p>
+            </div>
+          </div>
+
+          {/* Desktop: full hero panel */}
+          <div className="hidden md:flex relative w-full h-full flex-col items-center justify-center p-16 z-10 min-h-[600px] lg:min-h-[800px]">
             <div className="relative z-10 w-full aspect-video rounded-2xl overflow-hidden shadow-2xl mb-12 transform -rotate-2">
               <img alt="Academic Excellence" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQFsvzu7ieFUp5fGWcP7dy4PIabIpzanurSDYHae95HTs0oLvCUoe_nhQ-93PgOhY3HguVSCIUoJji5gd19s0jem41zB9S_e87B8fqt8TaX4gQwTe2s71_eaVLTKkY0UXK7KgDsLPaKSlg4q9YnoJndFAzkKCd3NBjdf7YvoZf-yaGIR9J-EHxxYqmEaxGOHG43yyiGmLwQpgSN-PdQKh6bWFarCcqQIkl6ao5cxM0hxEmp8--aKGI7Y8H4SBilJ1E_XTYP0SFNGw" />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent"></div>
@@ -350,7 +364,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="absolute inset-0 pointer-events-none opacity-20" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6K-59FVcSLfm6Kr0R--QGx29WMd_wFgI0ANuuhZmYBAdzbK6KZwqkwjcI9zON1CGKNVrjP9ZQ0L9AHfYcri_oyElgp7S5iuH9I3dz2k_qCmc2aozJP3TsmYsY-l0lip_04VY6rVVasGb3PZ_lPOxH__Td-XU4tgTotY7Cdmc3WUngCkx7mg7jxzY9G2pxRQy9c1P1hZl49AFP36v4Xa2LMVB2vwN1hsI7R16s251n9RtYLma0lSqS8kpVUAS9zYi47VhSUBaTK2Q')"}}></div>
+          <div className="absolute inset-0 pointer-events-none opacity-20 hidden md:block" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6K-59FVcSLfm6Kr0R--QGx29WMd_wFgI0ANuuhZmYBAdzbK6KZwqkwjcI9zON1CGKNVrjP9ZQ0L9AHfYcri_oyElgp7S5iuH9I3dz2k_qCmc2aozJP3TsmYsY-l0lip_04VY6rVVasGb3PZ_lPOxH__Td-XU4tgTotY7Cdmc3WUngCkx7mg7jxzY9G2pxRQy9c1P1hZl49AFP36v4Xa2LMVB2vwN1hsI7R16s251n9RtYLma0lSqS8kpVUAS9zYi47VhSUBaTK2Q')"}}></div>
         </section>
       </main>
     </div>

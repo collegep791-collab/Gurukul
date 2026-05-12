@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
 const navItems = [
@@ -15,24 +15,10 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation();
-  const { user, addResource } = useData();
+  const { user } = useData();
 
   const filteredItems = navItems.filter(item => item.role.includes(user.role));
-
-  const handleAdd = () => {
-    addResource({
-      title: 'New Research Paper (User Upload)',
-      type: 'Document',
-      format: 'PDF',
-      size: '2.5MB',
-      uploader: 'You',
-      category: 'Research',
-      status: 'Live',
-      date: new Date().toISOString(),
-      views: '0',
-      downloads: '0'
-    });
-  };
+  const navigate = useNavigate();
 
   return (
     <aside className="hidden md:flex flex-col gap-2 p-4 pt-4 h-[calc(100vh-64px)] w-64 bg-surface-container-low dark:bg-slate-950 border-r border-outline-variant/10 dark:border-slate-800/50 fixed left-0 overflow-y-auto">
@@ -70,15 +56,17 @@ export default function Sidebar() {
       </nav>
       
       <div className="mt-auto pt-6 space-y-4">
-        <button onClick={handleAdd} className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-lg text-sm font-semibold shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          New Resource
-        </button>
+        {user.role !== 'STUDENT' && (
+          <button onClick={() => navigate('/resources')} className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-lg text-sm font-semibold shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            New Resource
+          </button>
+        )}
         <div className="border-t border-slate-200/50 dark:border-slate-800/50 pt-4">
-          <a className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg" href="#">
+          <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg">
             <span className="material-symbols-outlined text-[20px]">help_outline</span>
             Help Center
-          </a>
+          </button>
         </div>
       </div>
     </aside>

@@ -18,14 +18,14 @@ export default function AuditLogs() {
 
   return (
     <DashboardLayout>
-      <header className="mb-10 px-6">
+      <header className="mb-10">
         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-on-surface dark:text-white mb-3">Audit Logs</h1>
         <p className="text-on-surface-variant dark:text-slate-400 text-lg font-medium max-w-2xl">
           System-wide administrative and security events trail.
         </p>
       </header>
       
-      <div className="mx-6 bg-surface-container-lowest dark:bg-slate-900 rounded-3xl shadow-xl shadow-surface-container-low/50 dark:shadow-slate-950/50 border border-outline-variant/10 dark:border-slate-800 overflow-hidden">
+      <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl shadow-surface-container-low/50 dark:shadow-slate-950/50 border border-outline-variant/10 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

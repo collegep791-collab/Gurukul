@@ -116,7 +116,7 @@ export default function Settings() {
 
   return (
     <DashboardLayout>
-      <div className="px-6 py-4">
+      <div className="px-0 sm:px-2 md:px-6 py-4">
         <h1 className="text-4xl md:text-5xl font-black tracking-tight text-on-surface dark:text-white mb-10">Settings</h1>
 
         <div className="flex flex-col lg:flex-row gap-10 items-start">
@@ -141,13 +141,13 @@ export default function Settings() {
 
             {/* ─── PROFILE TAB ─── */}
             {activeTab === 'Profile' && (
-              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-[40px] p-10 shadow-xl space-y-8">
+              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-2xl sm:rounded-[32px] lg:rounded-[40px] p-5 sm:p-8 lg:p-10 shadow-xl space-y-8">
                 <div>
                   <h2 className="text-2xl font-black text-on-surface dark:text-white mb-1 tracking-tight">Public Identity</h2>
                   <p className="text-sm font-bold text-outline dark:text-slate-500 uppercase tracking-widest">Profile & Credentials</p>
                 </div>
 
-                <div className="flex items-center gap-10 p-8 bg-surface-container-low/40 dark:bg-slate-800/40 rounded-[32px]">
+                <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10 p-5 sm:p-8 bg-surface-container-low/40 dark:bg-slate-800/40 rounded-2xl sm:rounded-[32px]">
                   <div className="relative group">
                     <img className="w-28 h-28 rounded-[28px] object-cover ring-8 ring-white dark:ring-slate-900 shadow-2xl" src={user.avatar} alt={user.name} />
                     <input type="file" className="hidden" ref={fileRef} accept="image/*" onChange={handleAvatarUpload} />
@@ -183,7 +183,7 @@ export default function Settings() {
 
             {/* ─── SECURITY TAB ─── */}
             {activeTab === 'Security' && (
-              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-[40px] p-10 shadow-xl space-y-8">
+              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-2xl sm:rounded-[32px] lg:rounded-[40px] p-5 sm:p-8 lg:p-10 shadow-xl space-y-8">
                 <div>
                   <h2 className="text-2xl font-black text-on-surface dark:text-white mb-1 tracking-tight">Security</h2>
                   <p className="text-sm font-bold text-outline dark:text-slate-500 uppercase tracking-widest">Account protection settings</p>
@@ -196,7 +196,7 @@ export default function Settings() {
                     <label className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-[2px] ml-1">Current Password</label>
                     <input value={currentPw} onChange={e => setCurrentPw(e.target.value)} type="password" placeholder="••••••••" className="w-full px-6 py-4 bg-surface-container-low dark:bg-slate-800 border border-transparent rounded-2xl text-sm font-black text-on-surface dark:text-white focus:border-primary outline-none transition-all" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <label className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-[2px] ml-1">New Password</label>
                       <input value={newPw} onChange={e => setNewPw(e.target.value)} type="password" placeholder="••••••••" className="w-full px-6 py-4 bg-surface-container-low dark:bg-slate-800 border border-transparent rounded-2xl text-sm font-black text-on-surface dark:text-white focus:border-primary outline-none transition-all" />
@@ -229,7 +229,7 @@ export default function Settings() {
 
             {/* ─── NOTIFICATIONS TAB ─── */}
             {activeTab === 'Notifications' && (
-              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-[40px] p-10 shadow-xl space-y-8">
+              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-2xl sm:rounded-[32px] lg:rounded-[40px] p-5 sm:p-8 lg:p-10 shadow-xl space-y-8">
                 <div>
                   <h2 className="text-2xl font-black text-on-surface dark:text-white mb-1 tracking-tight">Notifications</h2>
                   <p className="text-sm font-bold text-outline dark:text-slate-500 uppercase tracking-widest">Control what alerts you receive</p>
@@ -262,7 +262,7 @@ export default function Settings() {
 
             {/* ─── PREFERENCES TAB ─── */}
             {activeTab === 'Preferences' && (
-              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-[40px] p-10 shadow-xl space-y-8">
+              <section className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/10 dark:border-slate-800 rounded-2xl sm:rounded-[32px] lg:rounded-[40px] p-5 sm:p-8 lg:p-10 shadow-xl space-y-8">
                 <div>
                   <h2 className="text-2xl font-black text-on-surface dark:text-white mb-1 tracking-tight">Appearance</h2>
                   <p className="text-sm font-bold text-outline dark:text-slate-500 uppercase tracking-widest">Interface & display preferences</p>

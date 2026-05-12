@@ -85,7 +85,7 @@ export default function Notes() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-160px)] bg-surface-container-lowest dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/10 dark:border-slate-800">
+      <div className="flex h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] bg-surface-container-lowest dark:bg-slate-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-outline-variant/10 dark:border-slate-800">
         
         {/* Notes List Sidebar */}
         <aside className={`${view === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-80 bg-surface-container-low dark:bg-slate-900/80 border-r border-outline-variant/10 dark:border-slate-800 flex-col flex-shrink-0`}>
@@ -267,7 +267,7 @@ export default function Notes() {
               </header>
 
               {/* Title + Content */}
-              <div className="flex-1 overflow-y-auto p-8 md:p-12 scrollbar-hide">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-8 md:p-12 scrollbar-hide">
                 <input
                   type="text"
                   value={editTitle}

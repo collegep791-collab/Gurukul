@@ -5,7 +5,10 @@ import { useData } from '../context/DataContext';
 export default function Users() {
   const { users, toggleUserSuspend, updateUserRole, createUser, fetchUsers } = useData();
   const [filterRole, setFilterRole] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
   const [updating, setUpdating] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const USERS_PER_PAGE = 10;
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'STUDENT', usn: '', class: '1st Year', section: 'A' });
@@ -23,9 +26,17 @@ export default function Users() {
     setUpdating(null);
   };
 
-  const filteredUsers = filterRole === 'All' 
+  const filteredUsers = (filterRole === 'All' 
     ? users 
-    : users.filter(u => u.role === filterRole.toUpperCase());
+    : users.filter(u => u.role === filterRole.toUpperCase())
+  ).filter(u => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * USERS_PER_PAGE, currentPage * USERS_PER_PAGE);
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -44,7 +55,7 @@ export default function Users() {
   return (
     <DashboardLayout>
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 px-6">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-on-surface dark:text-white mb-3">User Management</h1>
           <p className="text-on-surface-variant dark:text-slate-400 text-lg font-medium max-w-2xl">
@@ -60,7 +71,7 @@ export default function Users() {
         </button>
       </header>
 
-      <div className="mx-6 bg-surface-container-lowest dark:bg-slate-900 rounded-3xl shadow-xl shadow-surface-container-low/50 dark:shadow-slate-950/50 border border-outline-variant/10 dark:border-slate-800 overflow-hidden">
+      <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl shadow-surface-container-low/50 dark:shadow-slate-950/50 border border-outline-variant/10 dark:border-slate-800 overflow-hidden">
         
         {/* Filter Toolbar */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border-b border-outline-variant/10 dark:border-slate-800">
@@ -82,7 +93,13 @@ export default function Users() {
           <div className="flex items-center gap-4">
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline dark:text-slate-500 text-sm">search</span>
-              <input className="pl-10 pr-4 py-2 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium w-56 outline-none focus:ring-2 focus:ring-primary/20 transition-all dark:text-white dark:placeholder-slate-500" placeholder="Search users..." type="text" />
+              <input 
+                className="pl-10 pr-4 py-2 bg-surface-container-low dark:bg-slate-800 border-none rounded-xl text-sm font-medium w-56 outline-none focus:ring-2 focus:ring-primary/20 transition-all dark:text-white dark:placeholder-slate-500" 
+                placeholder="Search users..." 
+                type="text"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
             </div>
             <p className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-widest whitespace-nowrap">{filteredUsers.length} Users</p>
           </div>
@@ -103,7 +120,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-low dark:divide-slate-800">
-              {filteredUsers.map(u => (
+              {paginatedUsers.map(u => (
                 <tr key={u.id} className="hover:bg-surface-container-low/30 dark:hover:bg-slate-800/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
@@ -167,7 +184,7 @@ export default function Users() {
                   </td>
                 </tr>
               ))}
-              {filteredUsers.length === 0 && (
+              {paginatedUsers.length === 0 && (
                 <tr>
                   <td colSpan="7" className="px-6 py-16 text-center">
                     <span className="material-symbols-outlined text-5xl text-outline/20 dark:text-slate-700 block mb-4">group_off</span>
@@ -181,11 +198,23 @@ export default function Users() {
 
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-outline-variant/10 dark:border-slate-800">
-          <p className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-widest">Showing {filteredUsers.length} of {users.length} scholars</p>
-          <div className="flex gap-2">
-            <button className="h-9 w-9 border border-outline-variant/20 dark:border-slate-700 rounded-xl flex items-center justify-center hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-outline dark:text-slate-400"><span className="material-symbols-outlined text-sm">chevron_left</span></button>
-            <button className="h-9 w-9 bg-primary dark:bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-xs shadow-md shadow-primary/20">1</button>
-            <button className="h-9 w-9 border border-outline-variant/20 dark:border-slate-700 rounded-xl flex items-center justify-center hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-outline dark:text-slate-400"><span className="material-symbols-outlined text-sm">chevron_right</span></button>
+          <p className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-widest">Showing {paginatedUsers.length} of {filteredUsers.length} scholars</p>
+          <div className="flex gap-2 items-center">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+              disabled={currentPage <= 1}
+              className="h-9 w-9 border border-outline-variant/20 dark:border-slate-700 rounded-xl flex items-center justify-center hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-outline dark:text-slate-400 disabled:opacity-30"
+            >
+              <span className="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            <span className="text-xs font-black text-on-surface dark:text-white min-w-[40px] text-center">{currentPage}/{totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+              disabled={currentPage >= totalPages}
+              className="h-9 w-9 border border-outline-variant/20 dark:border-slate-700 rounded-xl flex items-center justify-center hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all text-outline dark:text-slate-400 disabled:opacity-30"
+            >
+              <span className="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
           </div>
         </div>
       </div>

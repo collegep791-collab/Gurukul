@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 
 export default function AdminDashboard() {
-  const { resources, deleteResource, moderationQueue, approveModeration, rejectModeration, metrics, users, assignments } = useData();
+  const { resources, deleteResource, moderationQueue, approveModeration, rejectModeration, metrics, fetchMetrics, users, assignments } = useData();
   const navigate = useNavigate();
+  const [resourceFilter, setResourceFilter] = useState('All');
 
   if (!metrics) return (
     <DashboardLayout>
@@ -18,12 +20,12 @@ export default function AdminDashboard() {
     <DashboardLayout>
       {/* Header Section */}
       <header className="mb-10">
-        <h1 className="text-[3.5rem] font-black tracking-tight text-on-surface dark:text-white leading-none mb-2">The Atheneum</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-[3.5rem] font-black tracking-tight text-on-surface dark:text-white leading-none mb-2">The Atheneum</h1>
         <p className="text-on-surface-variant dark:text-slate-400 text-lg font-medium">System health and resource insights for institutional excellence.</p>
       </header>
 
       {/* System Metrics Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
         <div className="bg-surface-container-lowest dark:bg-slate-900 p-6 rounded-xl border border-outline-variant/5 dark:border-slate-800 transition-all hover:shadow-lg group">
           <div className="flex items-center justify-between mb-4">
             <div className="p-2 bg-primary-fixed dark:bg-indigo-900/50 rounded-lg text-primary dark:text-indigo-400">
@@ -96,10 +98,19 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-black text-on-surface dark:text-white">Resource Registry</h2>
             <div className="flex gap-2">
-              <button className="bg-surface-container-high dark:bg-slate-800 px-4 py-2 rounded-lg text-sm font-black flex items-center gap-2 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all text-on-surface dark:text-white uppercase tracking-wider text-xs">
-                <span className="material-symbols-outlined text-sm">filter_list</span>
-                Filter
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setResourceFilter(prev => {
+                    const types = ['All', 'Document', 'Video', 'Audio', 'Image'];
+                    const idx = types.indexOf(prev);
+                    return types[(idx + 1) % types.length];
+                  })}
+                  className="bg-surface-container-high dark:bg-slate-800 px-4 py-2 rounded-lg text-sm font-black flex items-center gap-2 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all text-on-surface dark:text-white uppercase tracking-wider text-xs"
+                >
+                  <span className="material-symbols-outlined text-sm">filter_list</span>
+                  {resourceFilter === 'All' ? 'Filter' : resourceFilter}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -116,7 +127,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-container-low dark:divide-slate-800">
-                  {resources.map(res => (
+                  {resources.filter(r => resourceFilter === 'All' || r.type === resourceFilter).map(res => (
                     <tr key={res.id} className="hover:bg-surface-container-low/30 dark:hover:bg-slate-800/30 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -139,7 +150,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 text-on-surface-variant dark:text-slate-500 hover:text-primary dark:hover:text-indigo-400 transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                          <button onClick={() => navigate('/resources')} className="p-1.5 text-on-surface-variant dark:text-slate-500 hover:text-primary dark:hover:text-indigo-400 transition-colors" title="View in Resource Hub"><span className="material-symbols-outlined text-[18px]">open_in_new</span></button>
                           <button onClick={() => deleteResource(res.id)} className="p-1.5 text-on-surface-variant dark:text-slate-500 hover:text-error dark:hover:text-red-400 transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                         </div>
                       </td>
@@ -229,7 +240,7 @@ export default function AdminDashboard() {
             <div className="relative z-10">
               <h3 className="text-white text-lg font-black mb-2 leading-tight">Need admin support?</h3>
               <p className="text-primary-fixed/80 dark:text-indigo-200 text-xs mb-4 font-medium">Direct line to technical infrastructure team available 24/7.</p>
-              <button className="bg-white text-primary px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-black/10 hover:scale-105 active:scale-95 transition-all">Launch Chat</button>
+              <button onClick={() => navigate('/chat')} className="bg-white text-primary px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-black/10 hover:scale-105 active:scale-95 transition-all">Launch Chat</button>
             </div>
             <span className="material-symbols-outlined absolute -bottom-6 -right-6 text-8xl text-white/10 group-hover:rotate-12 transition-transform duration-500">support_agent</span>
           </div>

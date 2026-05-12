@@ -53,23 +53,24 @@ app.use(helmet({
   crossOriginOpenerPolicy: false // Allows Google Auth Popup to communicate back
 }));
 
-// Global rate limit: 300 requests per 15 minutes
+// Global rate limit: 1000 requests per 15 minutes (generous for SPA)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please try again later.' }
 });
 app.use('/api/', globalLimiter);
 
-// Strict rate limit for auth: 10 attempts per 15 minutes
+// Strict rate limit for auth attempts (login/register only, not session checks)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
 });
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // ─── Core Middleware ───
 app.use(cors({

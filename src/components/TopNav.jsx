@@ -121,7 +121,7 @@ export default function TopNav() {
                 <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10 dark:border-slate-800">
                   <h4 className="text-sm font-black text-on-surface dark:text-white">Notifications</h4>
                   {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="text-[10px] font-black text-primary dark:text-indigo-400 uppercase tracking-widest hover:underline min-min-w-[44px] min-h-[44px]">
+                    <button onClick={markAllRead} className="text-[10px] font-black text-primary dark:text-indigo-400 uppercase tracking-widest hover:underline min-w-[44px] min-h-[44px]">
                       Mark all read
                     </button>
                   )}
