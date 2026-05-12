@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api.js';
+import { supabase } from '../lib/supabase.js';
 import { useTheme } from './ThemeContext.jsx';
 
 const DataContext = createContext();
@@ -26,8 +27,8 @@ export function DataProvider({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [typingUsers, setTypingUsers] = useState({});
 
-  // WebSocket ref
-  const wsRef = useRef(null);
+  // Realtime subscriptions ref
+  const realtimeSubscriptions = useRef([]);
 
   // ─── Auth ───
   const checkAuth = useCallback(async () => {
@@ -83,6 +84,11 @@ export function DataProvider({ children }) {
     return handleAuthSuccess(userData);
   }, []);
 
+  const cleanupRealtime = useCallback(() => {
+    realtimeSubscriptions.current.forEach(sub => supabase.removeChannel(sub));
+    realtimeSubscriptions.current = [];
+  }, []);
+
   const logout = useCallback(async () => {
     await api.post('/auth/logout');
     setUser(null);
@@ -93,8 +99,8 @@ export function DataProvider({ children }) {
     setAssignments([]);
     setNotifications([]);
     setUnreadCount(0);
-    if (wsRef.current) wsRef.current.close();
-  }, []);
+    cleanupRealtime();
+  }, [cleanupRealtime]);
 
   // ─── Resources ───
   const fetchResources = useCallback(async () => {
@@ -171,10 +177,15 @@ export function DataProvider({ children }) {
   }, [fetchMessages]);
 
   const broadcastTyping = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && activeChannelId) {
-      wsRef.current.send(JSON.stringify({ type: 'typing', channelId: activeChannelId }));
+    if (activeChannelId && user) {
+      const typingChannel = supabase.channel(`typing:${activeChannelId}`);
+      typingChannel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: user.id, userName: user.name }
+      });
     }
-  }, [activeChannelId]);
+  }, [activeChannelId, user]);
 
   // ─── Notes ───
   const fetchNotes = useCallback(async () => {
@@ -272,42 +283,55 @@ export function DataProvider({ children }) {
     try { setMetrics(await api.get('/metrics')); } catch {}
   }, []);
 
-  // ─── WebSocket ───
-  const connectWebSocket = useCallback(() => {
+  // ─── Supabase Realtime Integration (Vercel Replacement for WebSockets) ───
+  const connectRealtime = useCallback(() => {
     if (!user) return;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:3001/ws`;
-    const ws = new WebSocket(wsUrl);
+    cleanupRealtime();
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'auth', userId: user.id }));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'new_message' && data.channelId === activeChannelId) {
+    // 1. Listen for new chat messages
+    const messagesSub = supabase
+      .channel('public:chat_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+        const newMsg = payload.new;
+        // Check if message belongs to active channel
+        if (newMsg.channel_id === activeChannelId) {
+          // Fetch sender details manually since Realtime payload doesn't do JOINs automatically
+          const { data: sender } = await supabase.from('users').select('name, avatar').eq('id', newMsg.sender_id).single();
+          const enrichedMsg = { ...newMsg, sender_name: sender?.name, sender_avatar: sender?.avatar };
           setMessages(prev => {
-            if (prev.some(m => m.id === data.message.id)) return prev;
-            return [...prev, data.message];
+            if (prev.some(m => m.id === enrichedMsg.id)) return prev;
+            return [...prev, enrichedMsg];
           });
         }
-        if (data.type === 'notification') {
-          setNotifications(prev => [data.notification, ...prev]);
-          setUnreadCount(prev => prev + 1);
-        }
-        if (data.type === 'typing' && data.channelId === activeChannelId) {
-          setTypingUsers(prev => ({ ...prev, [data.userId]: { name: data.userName, time: Date.now() } }));
-        }
-      } catch {}
-    };
+      })
+      .subscribe();
 
-    ws.onclose = () => {
-      setTimeout(() => connectWebSocket(), 3000);
-    };
+    // 2. Listen for notifications
+    const notificationsSub = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+        setNotifications(prev => [payload.new, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      })
+      .subscribe();
 
-    wsRef.current = ws;
-  }, [user, activeChannelId]);
+    // 3. Setup Typing Broadcaster (using Supabase Presence/Broadcast)
+    const typingSub = supabase.channel(`typing:${activeChannelId}`);
+    if (activeChannelId) {
+      typingSub
+        .on('broadcast', { event: 'typing' }, (payload) => {
+          if (payload.payload.userId !== user.id) {
+            setTypingUsers(prev => ({ 
+              ...prev, 
+              [payload.payload.userId]: { name: payload.payload.userName, time: Date.now() } 
+            }));
+          }
+        })
+        .subscribe();
+    }
+
+    realtimeSubscriptions.current = [messagesSub, notificationsSub, typingSub];
+  }, [user, activeChannelId, cleanupRealtime]);
 
   // ─── Effects ───
   useEffect(() => { checkAuth(); }, [checkAuth]);
@@ -333,31 +357,21 @@ export function DataProvider({ children }) {
   }, [activeChannelId, fetchMessages]);
 
   useEffect(() => {
-    if (user) connectWebSocket();
-    return () => { if (wsRef.current) wsRef.current.close(); };
-  }, [user, connectWebSocket]);
+    if (user) connectRealtime();
+    return () => cleanupRealtime();
+  }, [user, activeChannelId, connectRealtime, cleanupRealtime]);
 
   return (
     <DataContext.Provider value={{
-      // Search
       searchQuery, setSearchQuery,
-      // Auth
       user, setUser, authLoading, login, register, googleLogin, logout, checkAuth,
-      // Resources
       resources, addResource, deleteResource, fetchResources,
-      // Users
       users, fetchUsers, updateUserRole, toggleUserSuspend, createUser,
-      // Chat
       channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, createChannel, broadcastTyping, typingUsers,
-      // Notes
       notes, createNote, updateNote, deleteNote, fetchNotes,
-      // Assignments
       assignments, createAssignment, submitAssignment, fetchAssignments, fetchSubmissions, gradeSubmission,
-      // Notifications
       notifications, unreadCount, fetchNotifications, fetchUnreadCount, markNotificationRead, markAllRead,
-      // Moderation
       moderationQueue, approveModeration, rejectModeration,
-      // Metrics
       metrics, fetchMetrics,
     }}>
       {children}

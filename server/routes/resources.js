@@ -1,21 +1,10 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import db from '../db.js';
+import supabase from '../supabase.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
-
-// Multer config for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-    cb(null, `${unique}-${file.originalname.replace(/\s+/g, '_')}`);
-  }
-});
+// Use memory storage to send buffers directly to Supabase
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -31,126 +20,197 @@ const upload = multer({
 const router = Router();
 
 // GET /api/resources
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { type, category, featured, search } = req.query;
-  let sql = `
-    SELECT r.*, u.name as uploader_name, u.avatar as uploader_avatar
-    FROM resources r
-    LEFT JOIN users u ON r.uploader_id = u.id
-    WHERE 1=1
-  `;
-  const params = [];
+  
+  try {
+    let query = supabase
+      .from('resources')
+      .select('*, uploader:users(name, avatar)')
+      .order('created_at', { ascending: false });
 
-  if (type && type !== 'All') { sql += ' AND r.type = ?'; params.push(type); }
-  if (category) { sql += ' AND r.category = ?'; params.push(category); }
-  if (featured === '1') { sql += ' AND r.featured = 1'; }
-  if (search) { sql += ' AND (r.title LIKE ? OR r.category LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+    if (type && type !== 'All') query = query.eq('type', type);
+    if (category) query = query.eq('category', category);
+    if (featured === '1') query = query.eq('featured', 1);
+    if (search) query = query.or(`title.ilike.%${search}%,category.ilike.%${search}%`);
 
-  sql += ' ORDER BY r.created_at DESC';
+    const { data, error } = await query;
+    if (error) throw error;
 
-  const resources = db.prepare(sql).all(...params);
-  res.json(resources);
+    // Flatten uploader details to match frontend expectations
+    const formatted = data.map(r => ({
+      ...r,
+      uploader_name: r.uploader?.name,
+      uploader_avatar: r.uploader?.avatar
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error fetching resources:', err);
+    res.status(500).json({ error: 'Failed to fetch resources' });
+  }
 });
 
 // GET /api/resources/:id
-router.get('/:id', (req, res) => {
-  const resource = db.prepare(`
-    SELECT r.*, u.name as uploader_name FROM resources r
-    LEFT JOIN users u ON r.uploader_id = u.id
-    WHERE r.id = ?
-  `).get(req.params.id);
-  if (!resource) return res.status(404).json({ error: 'Resource not found' });
+router.get('/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('resources')
+      .select('*, uploader:users(name)')
+      .eq('id', req.params.id)
+      .single();
 
-  // Increment views
-  db.prepare('UPDATE resources SET views = views + 1 WHERE id = ?').run(req.params.id);
-  res.json(resource);
+    if (error || !data) return res.status(404).json({ error: 'Resource not found' });
+
+    // Increment views
+    await supabase.from('resources').update({ views: data.views + 1 }).eq('id', req.params.id);
+    
+    res.json({ ...data, uploader_name: data.uploader?.name });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch resource' });
+  }
 });
 
 // GET /api/resources/:id/download
-router.get('/:id/download', (req, res) => {
-  const resource = db.prepare('SELECT * FROM resources WHERE id = ?').get(req.params.id);
-  if (!resource) return res.status(404).json({ error: 'Resource not found' });
-  if (!resource.file_path) return res.status(404).json({ error: 'No file attached to this resource' });
+router.get('/:id/download', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('resources').select('*').eq('id', req.params.id).single();
+    if (error || !data) return res.status(404).json({ error: 'Resource not found' });
+    if (!data.file_path) return res.status(404).json({ error: 'No file attached to this resource' });
 
-  const filePath = path.join(UPLOAD_DIR, resource.file_path);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found on disk' });
-
-  // Increment downloads
-  db.prepare('UPDATE resources SET downloads = downloads + 1 WHERE id = ?').run(req.params.id);
-  res.download(filePath, resource.file_path);
+    // Increment downloads
+    await supabase.from('resources').update({ downloads: data.downloads + 1 }).eq('id', req.params.id);
+    
+    // Redirect to the public URL for actual download
+    res.redirect(data.file_path);
+  } catch (err) {
+    res.status(500).json({ error: 'Download failed' });
+  }
 });
 
-// POST /api/resources — supports both JSON and multipart/form-data
-router.post('/', upload.single('file'), (req, res) => {
+// POST /api/resources
+router.post('/', upload.single('file'), async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { title, type, format, category, thumbnail } = req.body;
   if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
 
-  const filePath = req.file ? req.file.filename : '';
-  const fileSize = req.file ? `${(req.file.size / (1024 * 1024)).toFixed(1)}MB` : (req.body.size || '');
-  const fileFormat = req.file ? path.extname(req.file.originalname).slice(1).toUpperCase() : (format || 'PDF');
+  let fileUrl = '';
+  let fileSize = req.body.size || '';
+  let fileFormat = format || 'PDF';
 
-  const result = db.prepare(`
-    INSERT INTO resources (title, type, format, size, file_path, uploader_id, category, status, thumbnail)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'Live', ?)
-  `).run(title, type || 'Document', fileFormat, fileSize, filePath, req.session.userId, category || '', thumbnail || '');
+  try {
+    // 1. Upload file to Supabase Storage if attached
+    if (req.file) {
+      const ext = path.extname(req.file.originalname);
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('resources')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype
+        });
 
-  const newResource = db.prepare('SELECT r.*, u.name as uploader_name FROM resources r LEFT JOIN users u ON r.uploader_id = u.id WHERE r.id = ?').get(result.lastInsertRowid);
+      if (uploadError) throw uploadError;
 
-  // Audit log
-  if (req.app.locals.auditLog) {
-    req.app.locals.auditLog(req.session.userId, 'resource_upload', 'resource', newResource.id, `Uploaded: ${title}`);
-  }
-
-  // Notify users who have notify_resources enabled
-  const subscribers = db.prepare("SELECT user_id FROM user_settings WHERE notify_resources = 1 AND user_id != ?").all(req.session.userId);
-  for (const { user_id } of subscribers) {
-    if (req.app.locals.notify) {
-      req.app.locals.notify(user_id, {
-        type: 'resource',
-        title: 'New Resource Available',
-        body: `"${title}" was uploaded to the Resource Hub.`,
-        link: '/resources'
-      });
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage.from('resources').getPublicUrl(fileName);
+      fileUrl = publicUrlData.publicUrl;
+      
+      fileSize = `${(req.file.size / (1024 * 1024)).toFixed(1)}MB`;
+      fileFormat = ext.slice(1).toUpperCase();
     }
-  }
 
-  res.status(201).json(newResource);
+    // 2. Insert DB record
+    const { data: newResource, error: dbError } = await supabase
+      .from('resources')
+      .insert({
+        title,
+        type: type || 'Document',
+        format: fileFormat,
+        size: fileSize,
+        file_path: fileUrl, // Store Supabase public URL directly
+        uploader_id: req.session.userId,
+        category: category || '',
+        status: 'Live',
+        thumbnail: thumbnail || ''
+      })
+      .select('*, uploader:users(name)')
+      .single();
+
+    if (dbError) throw dbError;
+
+    const formattedResource = { ...newResource, uploader_name: newResource.uploader?.name };
+
+    // Audit log
+    if (req.app.locals.auditLog) {
+      req.app.locals.auditLog(req.session.userId, 'resource_upload', 'resource', newResource.id, `Uploaded: ${title}`);
+    }
+
+    res.status(201).json(formattedResource);
+  } catch (err) {
+    console.error('Resource upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
 });
 
 // DELETE /api/resources/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const resource = db.prepare('SELECT * FROM resources WHERE id = ?').get(req.params.id);
-  if (resource && resource.file_path) {
-    const filePath = path.join(UPLOAD_DIR, resource.file_path);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  try {
+    const { data: resource } = await supabase.from('resources').select('*').eq('id', req.params.id).single();
+    
+    // Delete file from Supabase Storage if it exists
+    if (resource && resource.file_path && resource.file_path.includes('supabase.co')) {
+      const fileName = resource.file_path.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('resources').remove([fileName]);
+      }
+    }
+
+    // Delete DB record
+    await supabase.from('resources').delete().eq('id', req.params.id);
+
+    if (req.app.locals.auditLog) {
+      req.app.locals.auditLog(req.session.userId, 'resource_delete', 'resource', req.params.id, `Deleted: ${resource?.title}`);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Resource delete error:', err);
+    res.status(500).json({ error: 'Delete failed' });
   }
-
-  db.prepare('DELETE FROM resources WHERE id = ?').run(req.params.id);
-
-  if (req.app.locals.auditLog) {
-    req.app.locals.auditLog(req.session.userId, 'resource_delete', 'resource', req.params.id, `Deleted: ${resource?.title}`);
-  }
-
-  res.json({ ok: true });
 });
 
 // PATCH /api/resources/:id
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  
   const updates = req.body;
-  const fields = Object.keys(updates).filter(k => ['title','type','format','size','category','status','featured','verified','thumbnail'].includes(k));
-  if (fields.length === 0) return res.status(400).json({ error: 'No valid fields' });
+  const validFields = ['title','type','format','size','category','status','featured','verified','thumbnail'];
+  const updateData = {};
+  
+  validFields.forEach(f => {
+    if (updates[f] !== undefined) updateData[f] = updates[f];
+  });
 
-  const sets = fields.map(f => `${f} = ?`).join(', ');
-  const vals = fields.map(f => updates[f]);
-  db.prepare(`UPDATE resources SET ${sets} WHERE id = ?`).run(...vals, req.params.id);
+  if (Object.keys(updateData).length === 0) return res.status(400).json({ error: 'No valid fields' });
 
-  const resource = db.prepare('SELECT r.*, u.name as uploader_name FROM resources r LEFT JOIN users u ON r.uploader_id = u.id WHERE r.id = ?').get(req.params.id);
-  res.json(resource);
+  try {
+    const { data: resource, error } = await supabase
+      .from('resources')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select('*, uploader:users(name)')
+      .single();
+
+    if (error) throw error;
+
+    res.json({ ...resource, uploader_name: resource.uploader?.name });
+  } catch (err) {
+    res.status(500).json({ error: 'Update failed' });
+  }
 });
 
 export default router;

@@ -1,53 +1,91 @@
-import db from './db.js';
 import bcrypt from 'bcryptjs';
+import supabase from './supabase.js';
 
 const SALT = bcrypt.genSaltSync(10);
 const hash = (pw) => bcrypt.hashSync(pw, SALT);
 
-export default function seed() {
-  const count = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+export default async function seed() {
+  if (!supabase) {
+    console.log('⚠️ Supabase client not initialized. Skipping seed.');
+    return;
+  }
+
+  const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
+  
   if (count > 0) {
     console.log('📦 Database already seeded. Skipping.');
     return;
   }
 
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Seeding Supabase database...');
 
-  const insertUser = db.prepare(`
-    INSERT INTO users (name, email, password_hash, avatar, role, status, credits, streak, progress, date_joined)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  const users = [
+    { name: 'System Admin', email: 'admin@gurukul.edu', pw: 'password123', avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Admin', role: 'ADMIN', status: 'Active', credits: 5000, streak: 100, progress: 99, date_joined: '2021-10-15' },
+    { name: 'Prof. Guide', email: 'teacher@gurukul.edu', pw: 'password123', avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Teacher', role: 'TEACHER', status: 'Active', credits: 3200, streak: 45, progress: 92, date_joined: '2022-01-05' },
+    { name: 'Student One', email: 'student@gurukul.edu', pw: 'password123', avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Student', role: 'STUDENT', status: 'Active', credits: 1240, streak: 12, progress: 68, date_joined: '2023-08-15' }
+  ];
 
-  const users = [];
+  const insertedUsers = [];
 
-  // Admins & Teachers
-  users.push({ name: 'System Admin', email: 'admin@gurukul.edu', pw: 'password123', avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Admin', role: 'ADMIN', status: 'Active', credits: 5000, streak: 100, progress: 99, joined: '2021-10-15' });
-  users.push({ name: 'Prof. Guide', email: 'teacher@gurukul.edu', pw: 'password123', avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Teacher', role: 'TEACHER', status: 'Active', credits: 3200, streak: 45, progress: 92, joined: '2022-01-05' });
-  users.push({ name: 'Student One', email: 'student@gurukul.edu', pw: 'password123', avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Student', role: 'STUDENT', status: 'Active', credits: 1240, streak: 12, progress: 68, joined: '2023-08-15' });
-
-  const insertUsers = db.transaction(() => {
-    for (const u of users) {
-      insertUser.run(u.name, u.email, hash(u.pw), u.avatar, u.role, u.status, u.credits, u.streak, u.progress, u.joined);
+  for (const u of users) {
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert({
+        name: u.name,
+        email: u.email,
+        password_hash: hash(u.pw),
+        avatar: u.avatar,
+        role: u.role,
+        status: u.status,
+        credits: u.credits,
+        streak: u.streak,
+        progress: u.progress,
+        date_joined: u.date_joined
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error inserting user:', u.email, error);
+    } else {
+      insertedUsers.push(newUser);
+      // Create settings
+      await supabase.from('user_settings').insert({
+        user_id: newUser.id,
+        theme: 'light',
+        two_factor: 1,
+        notify_resources: 1,
+        notify_mentions: 1,
+        notify_updates: 0
+      });
     }
-  });
-  insertUsers();
+  }
 
-  // ─── Settings ───
-  const insertSettings = db.prepare(`INSERT INTO user_settings (user_id, theme, two_factor, notify_resources, notify_mentions, notify_updates) VALUES (?, ?, ?, ?, ?, ?)`);
-  db.transaction(() => {
-    for (let i = 1; i <= Object.keys(users).length; i++) {
-      insertSettings.run(i, 'light', 1, 1, 1, 0);
+  // Create Global Chat Channel
+  const { data: channel, error: channelError } = await supabase
+    .from('chat_channels')
+    .insert({
+      name: 'Campus Hub',
+      description: 'Global announcements and general chat for all students and faculty.',
+      type: 'channel',
+      created_by: insertedUsers[0]?.id
+    })
+    .select()
+    .single();
+
+  if (channel && !channelError) {
+    for (const u of insertedUsers) {
+      await supabase.from('chat_channel_members').insert({
+        channel_id: channel.id,
+        user_id: u.id
+      });
     }
-  })();
+  }
 
-  // ─── Global Chat Channel ───
-  const globalChannelId = db.prepare(`INSERT INTO chat_channels (name, description, type) VALUES ('Campus Hub', 'Global announcements and general chat for all students and faculty.', 'channel')`).run().lastInsertRowid;
-  const insertMember = db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)');
-  db.transaction(() => {
-    for (let i = 1; i <= Object.keys(users).length; i++) {
-      insertMember.run(globalChannelId, i);
-    }
-  })();
+  console.log('✅ Supabase database seeded with base users and Campus Hub channel.');
+}
 
-  console.log('✅ Database seeded with base users and Campus Hub channel.');
+// Support running directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed().then(() => process.exit(0));
 }

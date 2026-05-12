@@ -1,195 +1,294 @@
 import { Router } from 'express';
-import db from '../db.js';
+import supabase from '../supabase.js';
 
 const router = Router();
 
 // GET /api/chat/channels — channels the user belongs to
-router.get('/channels', (req, res) => {
+router.get('/channels', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const channels = db.prepare(`
-    SELECT c.*, 
-      (SELECT COUNT(*) FROM chat_channel_members WHERE channel_id = c.id) as member_count,
-      (SELECT text FROM chat_messages WHERE channel_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-    FROM chat_channels c
-    JOIN chat_channel_members cm ON cm.channel_id = c.id
-    WHERE cm.user_id = ?
-    ORDER BY c.created_at ASC
-  `).all(req.session.userId);
+  try {
+    // We need channels the user is a member of, along with member count and last message.
+    // In Supabase, this requires multiple steps or a complex join.
+    // 1. Get channel IDs the user is in
+    const { data: members, error: e1 } = await supabase
+      .from('chat_channel_members')
+      .select('channel_id')
+      .eq('user_id', req.session.userId);
+      
+    if (e1) throw e1;
+    
+    const channelIds = members.map(m => m.channel_id);
+    if (channelIds.length === 0) return res.json([]);
 
-  res.json(channels);
+    // 2. Get channels
+    const { data: channels, error: e2 } = await supabase
+      .from('chat_channels')
+      .select('*, members:chat_channel_members(user_id), messages:chat_messages(text, created_at)')
+      .in('id', channelIds)
+      .order('created_at', { ascending: true });
+
+    if (e2) throw e2;
+
+    const formatted = channels.map(c => {
+      // Find latest message manually
+      const msgs = c.messages || [];
+      msgs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
+      return {
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        type: c.type,
+        created_by: c.created_by,
+        created_at: c.created_at,
+        member_count: c.members?.length || 0,
+        last_message: msgs[0]?.text || null
+      };
+    });
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Chat GET error:', err);
+    res.status(500).json({ error: 'Failed to fetch channels' });
+  }
 });
 
 // POST /api/chat/channels — create class group and auto-enroll
-router.post('/channels', (req, res) => {
+router.post('/channels', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  const caller = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
-  if (caller?.role === 'STUDENT') return res.status(403).json({ error: 'Students cannot create channels' });
-
-  const { name, description, class: targetClass, section } = req.body;
-  if (!name) return res.status(400).json({ error: 'Channel name required' });
   
-  const result = db.prepare('INSERT INTO chat_channels (name, description, type, created_by) VALUES (?, ?, ?, ?)').run(
-    name.trim(), (description || '').trim(), 'channel', req.session.userId
-  );
-  const newChannelId = result.lastInsertRowid;
+  try {
+    const { data: caller } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    if (caller?.role === 'STUDENT') return res.status(403).json({ error: 'Students cannot create channels' });
 
-  // Add the creator
-  db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)').run(newChannelId, req.session.userId);
+    const { name, description, class: targetClass, section } = req.body;
+    if (!name) return res.status(400).json({ error: 'Channel name required' });
+    
+    const { data: channel, error: cErr } = await supabase
+      .from('chat_channels')
+      .insert({
+        name: name.trim(),
+        description: (description || '').trim(),
+        type: 'channel',
+        created_by: req.session.userId
+      })
+      .select()
+      .single();
 
-  // Auto-enroll all matching students if target class and section are provided
-  if (targetClass && section) {
-    const students = db.prepare('SELECT id FROM users WHERE role = ? AND class = ? AND section = ? AND status = ?').all('STUDENT', targetClass, section, 'Active');
-    const insertMember = db.prepare('INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)');
-    students.forEach(s => {
-      if (s.id !== req.session.userId) insertMember.run(newChannelId, s.id);
-    });
+    if (cErr) throw cErr;
+
+    // Add creator
+    const membersToInsert = [{ channel_id: channel.id, user_id: req.session.userId }];
+
+    // Auto-enroll
+    if (targetClass && section) {
+      const { data: students } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'STUDENT')
+        .eq('class', targetClass)
+        .eq('section', section)
+        .eq('status', 'Active');
+        
+      if (students) {
+        students.forEach(s => {
+          if (s.id !== req.session.userId) membersToInsert.push({ channel_id: channel.id, user_id: s.id });
+        });
+      }
+    }
+
+    await supabase.from('chat_channel_members').upsert(membersToInsert, { onConflict: 'channel_id,user_id' });
+
+    res.status(201).json({ ...channel, member_count: membersToInsert.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create channel' });
   }
-
-  const channel = db.prepare('SELECT *, 1 as member_count FROM chat_channels WHERE id = ?').get(newChannelId);
-  res.status(201).json(channel);
 });
 
 // GET /api/chat/channels/:id/messages?before=<id>&limit=50
-router.get('/channels/:id/messages', (req, res) => {
+router.get('/channels/:id/messages', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const before = req.query.before ? parseInt(req.query.before) : null;
 
-  let messages;
-  if (before) {
-    // Cursor pagination: get messages older than `before` id
-    messages = db.prepare(`
-      SELECT m.*, u.name as sender_name, u.avatar as sender_avatar
-      FROM chat_messages m
-      JOIN users u ON m.sender_id = u.id
-      WHERE m.channel_id = ? AND m.id < ?
-      ORDER BY m.created_at DESC
-      LIMIT ?
-    `).all(req.params.id, before, limit).reverse();
-  } else {
-    // Get latest messages
-    messages = db.prepare(`
-      SELECT m.*, u.name as sender_name, u.avatar as sender_avatar
-      FROM chat_messages m
-      JOIN users u ON m.sender_id = u.id
-      WHERE m.channel_id = ?
-      ORDER BY m.created_at DESC
-      LIMIT ?
-    `).all(req.params.id, limit).reverse();
-  }
+  try {
+    let query = supabase
+      .from('chat_messages')
+      .select('*, sender:users!sender_id(name, avatar)')
+      .eq('channel_id', req.params.id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-  res.json(messages);
+    if (before) {
+      query = query.lt('id', before);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const formatted = data.reverse().map(m => ({
+      ...m,
+      sender_name: m.sender?.name,
+      sender_avatar: m.sender?.avatar
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
 });
 
 // GET /api/chat/channels/:id/pinned
-router.get('/channels/:id/pinned', (req, res) => {
+router.get('/channels/:id/pinned', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const pinned = db.prepare(`
-    SELECT m.*, u.name as sender_name
-    FROM chat_messages m
-    JOIN users u ON m.sender_id = u.id
-    WHERE m.channel_id = ? AND m.pinned = 1
-    ORDER BY m.created_at DESC
-  `).all(req.params.id);
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*, sender:users!sender_id(name)')
+      .eq('channel_id', req.params.id)
+      .eq('pinned', 1)
+      .order('created_at', { ascending: false });
 
-  res.json(pinned);
+    if (error) throw error;
+    
+    const formatted = data.map(m => ({ ...m, sender_name: m.sender?.name }));
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch pinned messages' });
+  }
 });
 
 // GET /api/chat/channels/:id/members
-router.get('/channels/:id/members', (req, res) => {
+router.get('/channels/:id/members', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const members = db.prepare(`
-    SELECT u.id, u.name, u.avatar, u.role, u.status
-    FROM users u
-    JOIN chat_channel_members cm ON cm.user_id = u.id
-    WHERE cm.channel_id = ?
-  `).all(req.params.id);
+  try {
+    const { data, error } = await supabase
+      .from('chat_channel_members')
+      .select('users(id, name, avatar, role, status)')
+      .eq('channel_id', req.params.id);
 
-  res.json(members);
+    if (error) throw error;
+    
+    const formatted = data.map(m => m.users).filter(Boolean);
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
 });
 
 // POST /api/chat/channels/:id/messages
-router.post('/channels/:id/messages', (req, res) => {
+router.post('/channels/:id/messages', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { text, attachment } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Message text required' });
 
-  const result = db.prepare(`
-    INSERT INTO chat_messages (channel_id, sender_id, text, attachment_json)
-    VALUES (?, ?, ?, ?)
-  `).run(req.params.id, req.session.userId, text, attachment ? JSON.stringify(attachment) : null);
+  try {
+    const { data: msgResult, error: msgErr } = await supabase
+      .from('chat_messages')
+      .insert({
+        channel_id: req.params.id,
+        sender_id: req.session.userId,
+        text,
+        attachment_json: attachment ? JSON.stringify(attachment) : null
+      })
+      .select('*, sender:users!sender_id(name, avatar)')
+      .single();
 
-  const message = db.prepare(`
-    SELECT m.*, u.name as sender_name, u.avatar as sender_avatar
-    FROM chat_messages m
-    JOIN users u ON m.sender_id = u.id
-    WHERE m.id = ?
-  `).get(result.lastInsertRowid);
+    if (msgErr) throw msgErr;
 
-  // Broadcast via WebSocket (handled in index.js)
-  if (req.app.locals.broadcastToChannel) {
-    req.app.locals.broadcastToChannel(parseInt(req.params.id), {
-      type: 'new_message',
-      channelId: parseInt(req.params.id),
-      message
-    });
+    const message = {
+      ...msgResult,
+      sender_name: msgResult.sender?.name,
+      sender_avatar: msgResult.sender?.avatar
+    };
+
+    // Broadcast via WebSocket (handled in index.js)
+    if (req.app.locals.broadcastToChannel) {
+      await req.app.locals.broadcastToChannel(parseInt(req.params.id), {
+        type: 'new_message',
+        channelId: parseInt(req.params.id),
+        message
+      });
+    }
+
+    res.status(201).json(message);
+  } catch (err) {
+    console.error('Message error:', err);
+    res.status(500).json({ error: 'Failed to send message' });
   }
-
-  res.status(201).json(message);
 });
 
 // POST /api/chat/dm — create or get existing DM channel between two users
-router.post('/dm', (req, res) => {
+router.post('/dm', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { targetUserId } = req.body;
   if (!targetUserId) return res.status(400).json({ error: 'Target user ID required' });
   if (targetUserId === req.session.userId) return res.status(400).json({ error: 'Cannot DM yourself' });
 
-  // Check if DM already exists between these two users
-  const existing = db.prepare(`
-    SELECT c.id FROM chat_channels c
-    WHERE c.type = 'dm'
-      AND (SELECT COUNT(*) FROM chat_channel_members WHERE channel_id = c.id) = 2
-      AND EXISTS (SELECT 1 FROM chat_channel_members WHERE channel_id = c.id AND user_id = ?)
-      AND EXISTS (SELECT 1 FROM chat_channel_members WHERE channel_id = c.id AND user_id = ?)
-  `).get(req.session.userId, targetUserId);
+  try {
+    // Find existing DM: we need a dm channel with exactly these two users
+    // Since Supabase joins for this are complex, we fetch DM channels for current user, then check members
+    const { data: myDMs } = await supabase
+      .from('chat_channel_members')
+      .select('channel_id, chat_channels!inner(type)')
+      .eq('user_id', req.session.userId)
+      .eq('chat_channels.type', 'dm');
 
-  if (existing) {
-    const channel = db.prepare(`
-      SELECT c.*,
-        (SELECT COUNT(*) FROM chat_channel_members WHERE channel_id = c.id) as member_count,
-        (SELECT text FROM chat_messages WHERE channel_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-      FROM chat_channels c WHERE c.id = ?
-    `).get(existing.id);
-    return res.json(channel);
+    let existingId = null;
+    if (myDMs && myDMs.length > 0) {
+      const dmIds = myDMs.map(m => m.channel_id);
+      const { data: targetDMs } = await supabase
+        .from('chat_channel_members')
+        .select('channel_id')
+        .eq('user_id', targetUserId)
+        .in('channel_id', dmIds);
+
+      if (targetDMs && targetDMs.length > 0) {
+        existingId = targetDMs[0].channel_id;
+      }
+    }
+
+    if (existingId) {
+      const { data: channel } = await supabase.from('chat_channels').select('*, members:chat_channel_members(user_id), messages:chat_messages(text, created_at)').eq('id', existingId).single();
+      const msgs = channel.messages || [];
+      msgs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      return res.json({
+        ...channel,
+        member_count: channel.members?.length || 0,
+        last_message: msgs[0]?.text || null
+      });
+    }
+
+    // Create new DM
+    const { data: targetUser } = await supabase.from('users').select('name').eq('id', targetUserId).single();
+    const { data: currentUser } = await supabase.from('users').select('name').eq('id', req.session.userId).single();
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    const dmName = `${currentUser.name.split(' ')[0]} & ${targetUser.name.split(' ')[0]}`;
+    
+    const { data: channel, error: dmErr } = await supabase
+      .from('chat_channels')
+      .insert({ name: dmName, description: 'Direct Message', type: 'dm' })
+      .select()
+      .single();
+
+    if (dmErr) throw dmErr;
+
+    await supabase.from('chat_channel_members').insert([
+      { channel_id: channel.id, user_id: req.session.userId },
+      { channel_id: channel.id, user_id: targetUserId }
+    ]);
+
+    res.status(201).json({ ...channel, member_count: 2, last_message: null });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create DM' });
   }
-
-  // Create new DM
-  const targetUser = db.prepare('SELECT name FROM users WHERE id = ?').get(targetUserId);
-  const currentUser = db.prepare('SELECT name FROM users WHERE id = ?').get(req.session.userId);
-  if (!targetUser) return res.status(404).json({ error: 'User not found' });
-
-  const dmName = `${currentUser.name.split(' ')[0]} & ${targetUser.name.split(' ')[0]}`;
-  const result = db.prepare(`INSERT INTO chat_channels (name, description, type) VALUES (?, 'Direct Message', 'dm')`).run(dmName);
-  const channelId = result.lastInsertRowid;
-
-  db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)').run(channelId, req.session.userId);
-  db.prepare('INSERT INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)').run(channelId, targetUserId);
-
-  const channel = db.prepare(`
-    SELECT c.*,
-      (SELECT COUNT(*) FROM chat_channel_members WHERE channel_id = c.id) as member_count,
-      (SELECT text FROM chat_messages WHERE channel_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-    FROM chat_channels c WHERE c.id = ?
-  `).get(channelId);
-
-  res.status(201).json(channel);
 });
 
 export default router;

@@ -1,66 +1,133 @@
 import { Router } from 'express';
-import db from '../db.js';
+import supabase from '../supabase.js';
 
 const router = Router();
 
 // GET /api/notes
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  // Get notes created by the current user, OR notes created by teachers/admins (which act as course material)
-  const notes = db.prepare(`
-    SELECT n.*, u.name as author_name, u.role as author_role 
-    FROM notes n
-    JOIN users u ON n.user_id = u.id
-    WHERE n.user_id = ? OR u.role IN ('TEACHER', 'ADMIN')
-    ORDER BY n.updated_at DESC
-  `).all(req.session.userId);
+  try {
+    // Get notes created by current user OR notes by teachers/admins
+    // Equivalent to: n.user_id = ? OR u.role IN ('TEACHER', 'ADMIN')
+    // We can do this efficiently by just getting all teacher/admin notes, and all user notes, and combining,
+    // or by letting Supabase do an OR filter on embedded data (which is tricky).
+    // Instead, let's fetch all notes and filter, or fetch notes by user_id, and then notes where author role is Teacher/Admin.
+    
+    // 1. Fetch user's own notes
+    const { data: ownNotes, error: e1 } = await supabase
+      .from('notes')
+      .select('*, author:users!user_id(name, role)')
+      .eq('user_id', req.session.userId);
 
-  res.json(notes);
+    // 2. Fetch public course notes (Teacher/Admin)
+    const { data: globalNotes, error: e2 } = await supabase
+      .from('notes')
+      .select('*, author:users!user_id(name, role)')
+      .neq('user_id', req.session.userId); // avoid duplicates
+
+    if (e1 || e2) throw (e1 || e2);
+
+    const filteredGlobalNotes = (globalNotes || []).filter(n => n.author?.role === 'TEACHER' || n.author?.role === 'ADMIN');
+    
+    let combined = [...(ownNotes || []), ...filteredGlobalNotes];
+    
+    combined.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+    const formatted = combined.map(n => ({
+      ...n,
+      author_name: n.author?.name,
+      author_role: n.author?.role
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Notes GET error:', err);
+    res.status(500).json({ error: 'Failed to fetch notes' });
+  }
 });
 
 // GET /api/notes/:id
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const note = db.prepare('SELECT * FROM notes WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
-  if (!note) return res.status(404).json({ error: 'Note not found' });
-  res.json(note);
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('user_id', req.session.userId)
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: 'Note not found' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch note' });
+  }
 });
 
 // POST /api/notes
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { title, content, category } = req.body;
-  const result = db.prepare(`
-    INSERT INTO notes (user_id, title, content, category) VALUES (?, ?, ?, ?)
-  `).run(req.session.userId, title || 'Untitled', content || '', category || 'General');
+  
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({
+        user_id: req.session.userId,
+        title: title || 'Untitled',
+        content: content || '',
+        category: category || 'General'
+      })
+      .select()
+      .single();
 
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(note);
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create note' });
+  }
 });
 
 // PUT /api/notes/:id
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { title, content, category } = req.body;
-  db.prepare(`
-    UPDATE notes SET title = ?, content = ?, category = ?, updated_at = datetime('now')
-    WHERE id = ? AND user_id = ?
-  `).run(title, content, category || 'General', req.params.id, req.session.userId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .update({
+        title,
+        content,
+        category: category || 'General',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.params.id)
+      .eq('user_id', req.session.userId)
+      .select()
+      .single();
 
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
-  res.json(note);
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update note' });
+  }
 });
 
 // DELETE /api/notes/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  db.prepare('DELETE FROM notes WHERE id = ? AND user_id = ?').run(req.params.id, req.session.userId);
-  res.json({ ok: true });
+  try {
+    await supabase.from('notes').delete().eq('id', req.params.id).eq('user_id', req.session.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete note' });
+  }
 });
 
 export default router;

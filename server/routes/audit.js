@@ -1,27 +1,37 @@
 import { Router } from 'express';
-import db from '../db.js';
+import supabase from '../supabase.js';
 
 const router = Router();
 
 // GET /api/audit — admin-only audit log
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
-  if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
+  try {
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    if (user?.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
 
-  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
-  const offset = parseInt(req.query.offset) || 0;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const offset = parseInt(req.query.offset) || 0;
 
-  const logs = db.prepare(`
-    SELECT al.*, u.name as actor_name, u.avatar as actor_avatar
-    FROM audit_log al
-    LEFT JOIN users u ON al.actor_id = u.id
-    ORDER BY al.created_at DESC
-    LIMIT ? OFFSET ?
-  `).all(limit, offset);
+    const { data: logs, error } = await supabase
+      .from('audit_log')
+      .select('*, actor:users!actor_id(name, avatar)')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-  res.json(logs);
+    if (error) throw error;
+
+    const formatted = logs.map(l => ({
+      ...l,
+      actor_name: l.actor?.name,
+      actor_avatar: l.actor?.avatar
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
 });
 
 export default router;

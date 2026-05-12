@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import db from '../db.js';
+import supabase from '../supabase.js';
 
 const router = Router();
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password, role } = req.body;
   if (!email || !password || !role) return res.status(400).json({ error: 'Email, password, and role required' });
 
@@ -14,29 +14,39 @@ router.post('/login', (req, res) => {
   if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
-  if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .ilike('email', email.trim())
+      .single();
 
-  // Check if suspended
-  if (user.status === 'Suspended') return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
+    if (error || !user) return res.status(401).json({ error: 'Invalid email or password' });
 
-  const valid = bcrypt.compareSync(password, user.password_hash);
-  if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
+    // Check if suspended
+    if (user.status === 'Suspended') return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
 
-  // Enforce Role
-  if (user.role !== role) {
-    return res.status(403).json({ error: `Account exists but is restricted from this portal. Please select your proper role.` });
+    const valid = bcrypt.compareSync(password, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
+
+    // Enforce Role
+    if (user.role !== role) {
+      return res.status(403).json({ error: `Account exists but is restricted from this portal. Please select your proper role.` });
+    }
+
+    // Store user id in session
+    req.session.userId = user.id;
+
+    const { password_hash, ...safeUser } = user;
+    res.json(safeUser);
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  // Store user id in session
-  req.session.userId = user.id;
-
-  const { password_hash, ...safeUser } = user;
-  res.json(safeUser);
 });
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, password, usn, class: studentClass, section } = req.body;
   
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
@@ -53,36 +63,49 @@ router.post('/register', (req, res) => {
   if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
-  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
-  if (existing) return res.status(400).json({ error: 'Email already registered' });
-
-  const hash = bcrypt.hashSync(password, 10);
-  const userRole = 'STUDENT'; // Force to STUDENT securely
-  
   try {
-    const result = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role, usn, class, section) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(name.trim(), email.trim().toLowerCase(), hash, userRole, (usn || '').trim(), (studentClass || '').trim(), (section || '').trim());
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('email', email.trim())
+      .single();
+
+    if (existing) return res.status(400).json({ error: 'Email already registered' });
+
+    const hash = bcrypt.hashSync(password, 10);
+    const userRole = 'STUDENT'; // Force to STUDENT securely
     
-    const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    // Insert new user
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password_hash: hash,
+        role: userRole,
+        usn: (usn || '').trim(),
+        class: (studentClass || '').trim(),
+        section: (section || '').trim()
+      })
+      .select()
+      .single();
+
+    if (insertError || !newUser) throw insertError;
+    
     req.session.userId = newUser.id;
     
-    // Log activity for streak tracking (assuming user_activity table exists or will exist)
-    try {
-      db.prepare("INSERT INTO user_activity (user_id, activity_type) VALUES (?, 'login')").run(newUser.id);
-      
-      const globalHub = db.prepare("SELECT id FROM chat_channels WHERE name = 'Campus Hub'").get();
-      if (globalHub) {
-        db.prepare("INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)").run(globalHub.id, newUser.id);
-      }
-    } catch (e) {
-      // Ignore if table doesn't exist yet
+    // Log activity and join default channel
+    await supabase.from('user_activity').insert({ user_id: newUser.id, activity_type: 'login' });
+    
+    const { data: globalHub } = await supabase.from('chat_channels').select('id').eq('name', 'Campus Hub').single();
+    if (globalHub) {
+      await supabase.from('chat_channel_members').upsert({ channel_id: globalHub.id, user_id: newUser.id }, { onConflict: 'channel_id,user_id' });
     }
     
     const { password_hash: _ph, ...safeUser } = newUser;
     res.json(safeUser);
   } catch (err) {
+    console.error('Registration error:', err);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
@@ -102,35 +125,43 @@ router.post('/google', async (req, res) => {
     const name = tokenInfo.name || email.split('@')[0];
     const picture = tokenInfo.picture || '';
     
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let { data: user } = await supabase.from('users').select('*').eq('email', email).single();
     
     if (!user) {
       // Create user
       const placeholderHash = bcrypt.hashSync(Math.random().toString(36).slice(-8), 10);
-      const result = db.prepare(`
-        INSERT INTO users (name, email, password_hash, role, avatar) 
-        VALUES (?, ?, ?, 'STUDENT', ?)
-      `).run(name, email, placeholderHash, picture);
-      
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert({
+          name,
+          email,
+          password_hash: placeholderHash,
+          role: 'STUDENT',
+          avatar: picture
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      user = newUser;
     } else if (user.status === 'Suspended') {
       return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
     
     req.session.userId = user.id;
     
-    try {
-      db.prepare("INSERT INTO user_activity (user_id, activity_type) VALUES (?, 'login')").run(user.id);
-      
-      const globalHub = db.prepare("SELECT id FROM chat_channels WHERE name = 'Campus Hub'").get();
-      if (globalHub) {
-        db.prepare("INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id) VALUES (?, ?)").run(globalHub.id, user.id);
-      }
-    } catch (e) {}
+    // Activity tracking
+    await supabase.from('user_activity').insert({ user_id: user.id, activity_type: 'login' });
+    
+    const { data: globalHub } = await supabase.from('chat_channels').select('id').eq('name', 'Campus Hub').single();
+    if (globalHub) {
+      await supabase.from('chat_channel_members').upsert({ channel_id: globalHub.id, user_id: user.id }, { onConflict: 'channel_id,user_id' });
+    }
 
     const { password_hash: _ph, ...safeUser } = user;
     res.json(safeUser);
   } catch (err) {
+    console.error('Google auth error:', err);
     res.status(500).json({ error: 'Google authentication failed' });
   }
 });
@@ -143,17 +174,21 @@ router.post('/logout', (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
-  if (!user) return res.status(401).json({ error: 'User not found' });
+  try {
+    const { data: user, error } = await supabase.from('users').select('*').eq('id', req.session.userId).single();
+    if (error || !user) return res.status(401).json({ error: 'User not found' });
 
-  const { password_hash, ...safeUser } = user;
+    const { password_hash, ...safeUser } = user;
 
-  // Also fetch settings
-  const settings = db.prepare('SELECT * FROM user_settings WHERE user_id = ?').get(user.id);
-  res.json({ ...safeUser, settings });
+    // Fetch settings
+    const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single();
+    res.json({ ...safeUser, settings: settings || null });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
 });
 
 export default router;
