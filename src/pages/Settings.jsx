@@ -66,7 +66,6 @@ export default function Settings() {
     const formData = new FormData();
     formData.append('avatar', file);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/users/me/avatar', {
         method: 'PATCH',
         body: formData,

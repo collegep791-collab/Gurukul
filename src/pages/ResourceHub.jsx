@@ -10,6 +10,18 @@ import DashboardLayout from '../components/DashboardLayout';
 import UploadModal from '../components/UploadModal';
 import { useData } from '../context/DataContext';
 
+// Skeleton loader for filter transitions
+const SkeletonCard = () => (
+  <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl overflow-hidden border border-outline-variant/5 dark:border-slate-800 animate-pulse">
+    <div className="aspect-video bg-surface-container-low dark:bg-slate-800" />
+    <div className="p-5 space-y-3">
+      <div className="h-3 bg-surface-container-low dark:bg-slate-800 rounded w-1/3" />
+      <div className="h-4 bg-surface-container-low dark:bg-slate-800 rounded w-3/4" />
+      <div className="h-3 bg-surface-container-low dark:bg-slate-800 rounded w-1/2 mt-4" />
+    </div>
+  </div>
+);
+
 export default function ResourceHub() {
   const { user, resources, addResource, deleteResource, searchQuery, setSearchQuery, fetchResources } = useData();
   const [filter, setFilter] = useState('All');
@@ -127,18 +139,6 @@ export default function ResourceHub() {
       fetchFiltered(filter, searchQuery);
     }
   };
-
-  // Skeleton loader for filter transitions
-  const SkeletonCard = () => (
-    <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl overflow-hidden border border-outline-variant/5 dark:border-slate-800 animate-pulse">
-      <div className="aspect-video bg-surface-container-low dark:bg-slate-800" />
-      <div className="p-5 space-y-3">
-        <div className="h-3 bg-surface-container-low dark:bg-slate-800 rounded w-1/3" />
-        <div className="h-4 bg-surface-container-low dark:bg-slate-800 rounded w-3/4" />
-        <div className="h-3 bg-surface-container-low dark:bg-slate-800 rounded w-1/2 mt-4" />
-      </div>
-    </div>
-  );
 
   return (
     <DashboardLayout>

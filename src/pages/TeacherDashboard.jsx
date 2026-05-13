@@ -7,13 +7,12 @@
  * requiring grading, published resources, and quick access to student rosters 
  * and moderation tools.
  */
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 
 export default function TeacherDashboard() {
-  const { user, resources, assignments, users, notes } = useData();
+  const { user, resources, assignments, users } = useData();
   const navigate = useNavigate();
 
   // Teacher-specific stats

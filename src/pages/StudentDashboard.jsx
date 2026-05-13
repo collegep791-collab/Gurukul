@@ -13,7 +13,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 
 export default function StudentDashboard() {
-  const { user, resources, notes, channels, messages, assignments } = useData();
+  const { user, resources, notes, messages, assignments } = useData();
   const navigate = useNavigate();
   const [chatInput, setChatInput] = useState('');
 

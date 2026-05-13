@@ -24,13 +24,13 @@ export default function Users() {
 
   const handleSuspend = async (uid) => {
     setUpdating(uid);
-    try { await toggleUserSuspend(uid); } catch(e) { alert('Failed to suspend'); }
+    try { await toggleUserSuspend(uid); } catch { alert('Failed to suspend'); }
     setUpdating(null);
   };
 
   const handleRoleChange = async (uid, role) => {
     setUpdating(uid);
-    try { await updateUserRole(uid, role); } catch(e) { alert('Failed to update role'); }
+    try { await updateUserRole(uid, role); } catch { alert('Failed to update role'); }
     setUpdating(null);
   };
 
