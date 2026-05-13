@@ -167,7 +167,11 @@ export function DataProvider({ children }) {
 
   const sendMessage = useCallback(async (text) => {
     if (!activeChannelId) return;
-    await api.post(`/chat/channels/${activeChannelId}/messages`, { text });
+    const newMsg = await api.post(`/chat/channels/${activeChannelId}/messages`, { text });
+    setMessages(prev => {
+      if (prev.some(m => m.id === newMsg.id)) return prev;
+      return [...prev, newMsg];
+    });
   }, [activeChannelId]);
 
   const switchChannel = useCallback(async (channelId) => {
