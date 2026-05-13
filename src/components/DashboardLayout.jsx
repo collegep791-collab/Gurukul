@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }) {
       <div className="flex min-h-screen pt-16">
         <Sidebar />
         {/* Main content area with proper bottom padding for mobile bottom nav */}
-        <main className="flex-1 md:ml-64 p-4 sm:p-5 md:p-6 lg:p-8 pb-24 md:pb-6 lg:pb-8 transition-all duration-300 min-w-0">
+        <main className="flex-1 md:ml-64 p-4 sm:p-5 md:p-6 lg:p-8 pb-24 md:pb-6 lg:pb-8 transition-all duration-300 min-w-0 animate-slide-up">
           {children}
         </main>
       </div>
