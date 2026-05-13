@@ -168,8 +168,13 @@ router.delete('/:id', async (req, res) => {
   if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     const { data: resource } = await supabase.from('resources').select('*').eq('id', req.params.id).single();
     
+    if (!resource) return res.status(404).json({ error: 'Resource not found' });
+    if (resource.uploader_id !== req.userId && user?.role !== 'ADMIN' && user?.role !== 'TEACHER') {
+      return res.status(403).json({ error: 'Forbidden: Admins, Teachers, or original uploaders only' });
+    }
     // Delete file from Supabase Storage if it exists
     if (resource && resource.file_path && resource.file_path.includes('supabase.co')) {
       const fileName = resource.file_path.split('/').pop();

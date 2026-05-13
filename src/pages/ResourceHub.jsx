@@ -11,7 +11,7 @@ import UploadModal from '../components/UploadModal';
 import { useData } from '../context/DataContext';
 
 export default function ResourceHub() {
-  const { user, resources, addResource, searchQuery, setSearchQuery, fetchResources } = useData();
+  const { user, resources, addResource, deleteResource, searchQuery, setSearchQuery, fetchResources } = useData();
   const [filter, setFilter] = useState('All');
   const [showUpload, setShowUpload] = useState(false);
   const [isLoadingFilter, setIsLoadingFilter] = useState(false);
@@ -117,6 +117,14 @@ export default function ResourceHub() {
       window.open(res.file_path.startsWith('http') ? res.file_path : `/uploads/${res.file_path}`, '_blank');
     } else if (res.thumbnail && res.thumbnail.startsWith('http')) {
       window.open(res.thumbnail, '_blank');
+    }
+  };
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this resource?")) {
+      await deleteResource(id);
+      fetchFiltered(filter, searchQuery);
     }
   };
 
@@ -277,10 +285,21 @@ export default function ResourceHub() {
                       <span className={`w-2 h-2 rounded-full ${res.verified ? 'bg-tertiary-fixed' : 'bg-primary-fixed'}`}></span>
                       <span className="text-[10px] font-black text-on-surface-variant dark:text-slate-400 uppercase tracking-wider">{res.verified ? 'Verified' : 'Reviewing'}</span>
                     </div>
-                    <span className="text-primary dark:text-indigo-400 text-[11px] font-black uppercase tracking-widest flex items-center gap-1 group-hover:gap-2 transition-all">
-                      {res.type === 'Video' ? 'Watch' : 'Open'}
-                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                    </span>
+                    <div className="flex items-center gap-3">
+                      {(user?.role === 'ADMIN' || user?.role === 'TEACHER' || res.uploader_id === user?.id) && (
+                        <button 
+                          onClick={(e) => handleDelete(e, res.id)} 
+                          className="text-error hover:bg-error/10 p-1 rounded transition-colors"
+                          title="Delete Resource"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      )}
+                      <span className="text-primary dark:text-indigo-400 text-[11px] font-black uppercase tracking-widest flex items-center gap-1 group-hover:gap-2 transition-all">
+                        {res.type === 'Video' ? 'Watch' : 'Open'}
+                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
