@@ -5,7 +5,7 @@ const router = Router();
 
 // GET /api/chat/channels — channels the user belongs to
 router.get('/channels', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     // We need channels the user is a member of, along with member count and last message.
@@ -14,7 +14,7 @@ router.get('/channels', async (req, res) => {
     const { data: members, error: e1 } = await supabase
       .from('chat_channel_members')
       .select('channel_id')
-      .eq('user_id', req.session.userId);
+      .eq('user_id', req.userId);
       
     if (e1) throw e1;
     
@@ -56,10 +56,10 @@ router.get('/channels', async (req, res) => {
 
 // POST /api/chat/channels — create class group and auto-enroll
 router.post('/channels', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   
   try {
-    const { data: caller } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: caller } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (caller?.role === 'STUDENT') return res.status(403).json({ error: 'Students cannot create channels' });
 
     const { name, description, class: targetClass, section } = req.body;
@@ -71,7 +71,7 @@ router.post('/channels', async (req, res) => {
         name: name.trim(),
         description: (description || '').trim(),
         type: 'channel',
-        created_by: req.session.userId
+        created_by: req.userId
       })
       .select()
       .single();
@@ -79,7 +79,7 @@ router.post('/channels', async (req, res) => {
     if (cErr) throw cErr;
 
     // Add creator
-    const membersToInsert = [{ channel_id: channel.id, user_id: req.session.userId }];
+    const membersToInsert = [{ channel_id: channel.id, user_id: req.userId }];
 
     // Auto-enroll
     if (targetClass && section) {
@@ -93,7 +93,7 @@ router.post('/channels', async (req, res) => {
         
       if (students) {
         students.forEach(s => {
-          if (s.id !== req.session.userId) membersToInsert.push({ channel_id: channel.id, user_id: s.id });
+          if (s.id !== req.userId) membersToInsert.push({ channel_id: channel.id, user_id: s.id });
         });
       }
     }
@@ -108,7 +108,7 @@ router.post('/channels', async (req, res) => {
 
 // GET /api/chat/channels/:id/messages?before=<id>&limit=50
 router.get('/channels/:id/messages', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const before = req.query.before ? parseInt(req.query.before) : null;
@@ -142,7 +142,7 @@ router.get('/channels/:id/messages', async (req, res) => {
 
 // GET /api/chat/channels/:id/pinned
 router.get('/channels/:id/pinned', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     const { data, error } = await supabase
@@ -163,7 +163,7 @@ router.get('/channels/:id/pinned', async (req, res) => {
 
 // GET /api/chat/channels/:id/members
 router.get('/channels/:id/members', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     const { data, error } = await supabase
@@ -182,7 +182,7 @@ router.get('/channels/:id/members', async (req, res) => {
 
 // POST /api/chat/channels/:id/messages
 router.post('/channels/:id/messages', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { text, attachment } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: 'Message text required' });
@@ -192,7 +192,7 @@ router.post('/channels/:id/messages', async (req, res) => {
       .from('chat_messages')
       .insert({
         channel_id: req.params.id,
-        sender_id: req.session.userId,
+        sender_id: req.userId,
         text,
         attachment_json: attachment ? JSON.stringify(attachment) : null
       })
@@ -225,11 +225,11 @@ router.post('/channels/:id/messages', async (req, res) => {
 
 // POST /api/chat/dm — create or get existing DM channel between two users
 router.post('/dm', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { targetUserId } = req.body;
   if (!targetUserId) return res.status(400).json({ error: 'Target user ID required' });
-  if (targetUserId === req.session.userId) return res.status(400).json({ error: 'Cannot DM yourself' });
+  if (targetUserId === req.userId) return res.status(400).json({ error: 'Cannot DM yourself' });
 
   try {
     // Find existing DM: we need a dm channel with exactly these two users
@@ -237,7 +237,7 @@ router.post('/dm', async (req, res) => {
     const { data: myDMs } = await supabase
       .from('chat_channel_members')
       .select('channel_id, chat_channels!inner(type)')
-      .eq('user_id', req.session.userId)
+      .eq('user_id', req.userId)
       .eq('chat_channels.type', 'dm');
 
     let existingId = null;
@@ -267,7 +267,7 @@ router.post('/dm', async (req, res) => {
 
     // Create new DM
     const { data: targetUser } = await supabase.from('users').select('name').eq('id', targetUserId).single();
-    const { data: currentUser } = await supabase.from('users').select('name').eq('id', req.session.userId).single();
+    const { data: currentUser } = await supabase.from('users').select('name').eq('id', req.userId).single();
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
     const dmName = `${currentUser.name.split(' ')[0]} & ${targetUser.name.split(' ')[0]}`;
@@ -281,7 +281,7 @@ router.post('/dm', async (req, res) => {
     if (dmErr) throw dmErr;
 
     await supabase.from('chat_channel_members').insert([
-      { channel_id: channel.id, user_id: req.session.userId },
+      { channel_id: channel.id, user_id: req.userId },
       { channel_id: channel.id, user_id: targetUserId }
     ]);
 

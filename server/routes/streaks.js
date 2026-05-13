@@ -5,13 +5,13 @@ const router = Router();
 
 // Ensure user is authenticated
 router.use((req, res, next) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   next();
 });
 
 // GET /api/streaks/me
 router.get('/me', async (req, res) => {
-  const userId = req.session.userId;
+  const userId = req.userId;
   
   try {
     const { data: user } = await supabase.from('users').select('streak, credits').eq('id', userId).single();
@@ -64,7 +64,7 @@ router.get('/me', async (req, res) => {
 
 // POST /api/streaks/checkin
 router.post('/checkin', async (req, res) => {
-  const userId = req.session.userId;
+  const userId = req.userId;
   
   try {
     const { data: user } = await supabase.from('users').select('streak, credits').eq('id', userId).single();

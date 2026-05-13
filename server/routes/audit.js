@@ -5,10 +5,10 @@ const router = Router();
 
 // GET /api/audit — admin-only audit log
 router.get('/', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (user?.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
 
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);

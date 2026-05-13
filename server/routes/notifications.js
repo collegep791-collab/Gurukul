@@ -4,7 +4,7 @@ import supabase from '../supabase.js';
 const router = Router();
 
 const requireAuth = (req, res, next) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   next();
 };
 
@@ -17,7 +17,7 @@ router.get('/', requireAuth, async (req, res) => {
     const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', req.session.userId)
+      .eq('user_id', req.userId)
       .order('read', { ascending: true })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -35,7 +35,7 @@ router.get('/unread-count', requireAuth, async (req, res) => {
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', req.session.userId)
+      .eq('user_id', req.userId)
       .eq('read', 0);
 
     if (error) throw error;
@@ -52,7 +52,7 @@ router.patch('/:id/read', requireAuth, async (req, res) => {
       .from('notifications')
       .update({ read: 1 })
       .eq('id', req.params.id)
-      .eq('user_id', req.session.userId);
+      .eq('user_id', req.userId);
       
     res.json({ ok: true });
   } catch (err) {
@@ -66,7 +66,7 @@ router.post('/read-all', requireAuth, async (req, res) => {
     await supabase
       .from('notifications')
       .update({ read: 1 })
-      .eq('user_id', req.session.userId);
+      .eq('user_id', req.userId);
       
     res.json({ ok: true });
   } catch (err) {

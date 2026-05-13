@@ -90,7 +90,7 @@ router.get('/:id/download', async (req, res) => {
 
 // POST /api/resources
 router.post('/', upload.single('file'), async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { title, type, format, category, thumbnail } = req.body;
   if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
@@ -130,7 +130,7 @@ router.post('/', upload.single('file'), async (req, res) => {
         format: fileFormat,
         size: fileSize,
         file_path: fileUrl, // Store Supabase public URL directly
-        uploader_id: req.session.userId,
+        uploader_id: req.userId,
         category: category || '',
         status: 'Live',
         thumbnail: thumbnail || ''
@@ -144,7 +144,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     // Audit log
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'resource_upload', 'resource', newResource.id, `Uploaded: ${title}`);
+      req.app.locals.auditLog(req.userId, 'resource_upload', 'resource', newResource.id, `Uploaded: ${title}`);
     }
 
     res.status(201).json(formattedResource);
@@ -156,7 +156,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
 // DELETE /api/resources/:id
 router.delete('/:id', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     const { data: resource } = await supabase.from('resources').select('*').eq('id', req.params.id).single();
@@ -173,7 +173,7 @@ router.delete('/:id', async (req, res) => {
     await supabase.from('resources').delete().eq('id', req.params.id);
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'resource_delete', 'resource', req.params.id, `Deleted: ${resource?.title}`);
+      req.app.locals.auditLog(req.userId, 'resource_delete', 'resource', req.params.id, `Deleted: ${resource?.title}`);
     }
 
     res.json({ ok: true });
@@ -185,7 +185,7 @@ router.delete('/:id', async (req, res) => {
 
 // PATCH /api/resources/:id
 router.patch('/:id', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   
   const updates = req.body;
   const validFields = ['title','type','format','size','category','status','featured','verified','thumbnail'];

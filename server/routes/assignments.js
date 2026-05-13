@@ -10,14 +10,14 @@ const router = Router();
 
 // Auth guard middleware
 const requireAuth = (req, res, next) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   next();
 };
 
 // GET /api/assignments — list assignments
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (!user) return res.status(401).json({ error: 'User not found' });
 
     let assignments = [];
@@ -36,7 +36,7 @@ router.get('/', requireAuth, async (req, res) => {
         const { data: submissions } = await supabase
           .from('submissions')
           .select('id, assignment_id, grade, feedback')
-          .eq('student_id', req.session.userId)
+          .eq('student_id', req.userId)
           .in('assignment_id', assignmentIds);
 
         // 3. Map together
@@ -60,7 +60,7 @@ router.get('/', requireAuth, async (req, res) => {
         .order('created_at', { ascending: false });
 
       if (user.role !== 'ADMIN') {
-        query = query.eq('created_by', req.session.userId);
+        query = query.eq('created_by', req.userId);
       }
 
       const { data: teacherAssignments } = await query;
@@ -90,7 +90,7 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/assignments — teacher/admin creates assignment
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (user.role === 'STUDENT') return res.status(403).json({ error: 'Students cannot create assignments' });
 
     const { title, description, course, due_date, max_points } = req.body;
@@ -105,7 +105,7 @@ router.post('/', requireAuth, async (req, res) => {
         course: course || '',
         due_date,
         max_points: max_points || 100,
-        created_by: req.session.userId
+        created_by: req.userId
       })
       .select('*, creator:users!created_by(name)')
       .single();
@@ -128,7 +128,7 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'assignment_create', 'assignment', assignment.id, `Created: ${title}`);
+      req.app.locals.auditLog(req.userId, 'assignment_create', 'assignment', assignment.id, `Created: ${title}`);
     }
 
     res.status(201).json(formattedAssignment);
@@ -145,7 +145,7 @@ router.post('/:id/submit', requireAuth, upload.single('file'), async (req, res) 
     if (assignment.status !== 'Active') return res.status(400).json({ error: 'Assignment is closed' });
 
     // Check if already submitted
-    const { data: existing } = await supabase.from('submissions').select('id').eq('assignment_id', req.params.id).eq('student_id', req.session.userId).single();
+    const { data: existing } = await supabase.from('submissions').select('id').eq('assignment_id', req.params.id).eq('student_id', req.userId).single();
     if (existing) return res.status(400).json({ error: 'Already submitted. Contact your teacher to resubmit.' });
 
     let fileUrl = '';
@@ -169,7 +169,7 @@ router.post('/:id/submit', requireAuth, upload.single('file'), async (req, res) 
       .from('submissions')
       .insert({
         assignment_id: req.params.id,
-        student_id: req.session.userId,
+        student_id: req.userId,
         file_path: fileUrl,
         comment: req.body.comment || ''
       })
@@ -180,7 +180,7 @@ router.post('/:id/submit', requireAuth, upload.single('file'), async (req, res) 
 
     // Notify the teacher
     if (req.app.locals.notify) {
-      const { data: student } = await supabase.from('users').select('name').eq('id', req.session.userId).single();
+      const { data: student } = await supabase.from('users').select('name').eq('id', req.userId).single();
       req.app.locals.notify(assignment.created_by, {
         type: 'assignment',
         title: 'New Submission',
@@ -199,7 +199,7 @@ router.post('/:id/submit', requireAuth, upload.single('file'), async (req, res) 
 // GET /api/assignments/:id/submissions — teacher views submissions
 router.get('/:id/submissions', requireAuth, async (req, res) => {
   try {
-    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (user.role === 'STUDENT') return res.status(403).json({ error: 'Forbidden' });
 
     const { data: submissions, error } = await supabase
@@ -226,7 +226,7 @@ router.get('/:id/submissions', requireAuth, async (req, res) => {
 // PATCH /api/assignments/:id/submissions/:subId/grade — teacher grades
 router.patch('/:id/submissions/:subId/grade', requireAuth, async (req, res) => {
   try {
-    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (user.role === 'STUDENT') return res.status(403).json({ error: 'Forbidden' });
 
     const { grade, feedback } = req.body;
@@ -237,7 +237,7 @@ router.patch('/:id/submissions/:subId/grade', requireAuth, async (req, res) => {
       .update({
         grade,
         feedback: feedback || '',
-        graded_by: req.session.userId,
+        graded_by: req.userId,
         graded_at: new Date().toISOString()
       })
       .eq('id', req.params.subId)
@@ -271,7 +271,7 @@ router.patch('/:id/submissions/:subId/grade', requireAuth, async (req, res) => {
     }
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'assignment_grade', 'submission', req.params.subId, `Graded: ${grade}`);
+      req.app.locals.auditLog(req.userId, 'assignment_grade', 'submission', req.params.subId, `Graded: ${grade}`);
     }
 
     res.json(submission);
@@ -283,7 +283,7 @@ router.patch('/:id/submissions/:subId/grade', requireAuth, async (req, res) => {
 // PATCH /api/assignments/:id — update assignment status
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
-    const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
     if (user.role === 'STUDENT') return res.status(403).json({ error: 'Forbidden' });
 
     const { status, title, description, due_date, max_points } = req.body;

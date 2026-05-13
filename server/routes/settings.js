@@ -5,14 +5,14 @@ const router = Router();
 
 // GET /api/settings
 router.get('/', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', req.session.userId).single();
+    const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', req.userId).single();
     
     if (!settings) {
       // Create default settings if missing
-      const defaultSettings = { user_id: req.session.userId, theme: 'light', two_factor: 1, notify_resources: 1, notify_mentions: 1, notify_updates: 0 };
+      const defaultSettings = { user_id: req.userId, theme: 'light', two_factor: 1, notify_resources: 1, notify_mentions: 1, notify_updates: 0 };
       await supabase.from('user_settings').insert(defaultSettings);
       return res.json(defaultSettings);
     }
@@ -25,13 +25,13 @@ router.get('/', async (req, res) => {
 
 // PUT /api/settings
 router.put('/', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { theme, two_factor, notify_resources, notify_mentions, notify_updates } = req.body;
 
   try {
     const updateData = {
-      user_id: req.session.userId,
+      user_id: req.userId,
       theme: theme ?? 'light',
       two_factor: two_factor ?? 1,
       notify_resources: notify_resources ?? 1,

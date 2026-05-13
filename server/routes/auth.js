@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import supabase from '../supabase.js';
+import { setAuthCookie, clearAuthCookie } from '../jwt.js';
 
 const router = Router();
 
@@ -34,8 +35,8 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: `Account exists but is restricted from this portal. Please select your proper role.` });
     }
 
-    // Store user id in session
-    req.session.userId = user.id;
+    // Set JWT cookie
+    setAuthCookie(res, user.id);
 
     const { password_hash, ...safeUser } = user;
     res.json(safeUser);
@@ -92,7 +93,8 @@ router.post('/register', async (req, res) => {
 
     if (insertError || !newUser) throw insertError;
     
-    req.session.userId = newUser.id;
+    // Set JWT cookie
+    setAuthCookie(res, newUser.id);
     
     // Log activity and join default channel
     await supabase.from('user_activity').insert({ user_id: newUser.id, activity_type: 'login' });
@@ -148,7 +150,8 @@ router.post('/google', async (req, res) => {
       return res.status(403).json({ error: 'Account suspended. Contact an administrator.' });
     }
     
-    req.session.userId = user.id;
+    // Set JWT cookie
+    setAuthCookie(res, user.id);
     
     // Activity tracking
     await supabase.from('user_activity').insert({ user_id: user.id, activity_type: 'login' });
@@ -168,17 +171,16 @@ router.post('/google', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ ok: true });
-  });
+  clearAuthCookie(res);
+  res.json({ ok: true });
 });
 
 // GET /api/auth/me
 router.get('/me', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    const { data: user, error } = await supabase.from('users').select('*').eq('id', req.session.userId).single();
+    const { data: user, error } = await supabase.from('users').select('*').eq('id', req.userId).single();
     if (error || !user) return res.status(401).json({ error: 'User not found' });
 
     const { password_hash, ...safeUser } = user;

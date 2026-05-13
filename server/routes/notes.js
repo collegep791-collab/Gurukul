@@ -5,7 +5,7 @@ const router = Router();
 
 // GET /api/notes
 router.get('/', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     // Get notes created by current user OR notes by teachers/admins
@@ -18,13 +18,13 @@ router.get('/', async (req, res) => {
     const { data: ownNotes, error: e1 } = await supabase
       .from('notes')
       .select('*, author:users!user_id(name, role)')
-      .eq('user_id', req.session.userId);
+      .eq('user_id', req.userId);
 
     // 2. Fetch public course notes (Teacher/Admin)
     const { data: globalNotes, error: e2 } = await supabase
       .from('notes')
       .select('*, author:users!user_id(name, role)')
-      .neq('user_id', req.session.userId); // avoid duplicates
+      .neq('user_id', req.userId); // avoid duplicates
 
     if (e1 || e2) throw (e1 || e2);
 
@@ -49,14 +49,14 @@ router.get('/', async (req, res) => {
 
 // GET /api/notes/:id
 router.get('/:id', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
     const { data, error } = await supabase
       .from('notes')
       .select('*')
       .eq('id', req.params.id)
-      .eq('user_id', req.session.userId)
+      .eq('user_id', req.userId)
       .single();
 
     if (error || !data) return res.status(404).json({ error: 'Note not found' });
@@ -68,7 +68,7 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/notes
 router.post('/', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { title, content, category } = req.body;
   
@@ -76,7 +76,7 @@ router.post('/', async (req, res) => {
     const { data, error } = await supabase
       .from('notes')
       .insert({
-        user_id: req.session.userId,
+        user_id: req.userId,
         title: title || 'Untitled',
         content: content || '',
         category: category || 'General'
@@ -93,7 +93,7 @@ router.post('/', async (req, res) => {
 
 // PUT /api/notes/:id
 router.put('/:id', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { title, content, category } = req.body;
   
@@ -107,7 +107,7 @@ router.put('/:id', async (req, res) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', req.params.id)
-      .eq('user_id', req.session.userId)
+      .eq('user_id', req.userId)
       .select()
       .single();
 
@@ -120,10 +120,10 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/notes/:id
 router.delete('/:id', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    await supabase.from('notes').delete().eq('id', req.params.id).eq('user_id', req.session.userId);
+    await supabase.from('notes').delete().eq('id', req.params.id).eq('user_id', req.userId);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete note' });

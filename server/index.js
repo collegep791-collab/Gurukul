@@ -1,5 +1,5 @@
 import express from 'express';
-import session from 'express-session';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 
 import seed from './seed.js';
 import supabase from './supabase.js';
+import { jwtMiddleware } from './jwt.js';
 import authRoutes from './routes/auth.js';
 import resourceRoutes from './routes/resources.js';
 import chatRoutes from './routes/chat.js';
@@ -64,23 +65,12 @@ app.use('/api/auth/register', authLimiter);
 
 // ─── Core Middleware ───
 app.use(cors({
-  origin: isProd ? (process.env.FRONTEND_URL || false) : 'http://localhost:5173',
+  origin: isProd ? (process.env.FRONTEND_URL || true) : 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
-
-const sessionMiddleware = session({
-  secret: isProd ? (process.env.SESSION_SECRET || 'insecure-fallback') : 'gurukul-dev-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: isProd,
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'lax'
-  }
-});
-app.use(sessionMiddleware);
+app.use(cookieParser());
+app.use(jwtMiddleware);
 
 // ─── API Routes ───
 app.use('/api/auth', authRoutes);
@@ -101,7 +91,7 @@ app.get('/api/health', (req, res) => {
 
 // ─── Moderation ───
 app.get('/api/moderation', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const { data, error } = await supabase
       .from('moderation_queue')
@@ -118,13 +108,13 @@ app.get('/api/moderation', async (req, res) => {
 });
 
 app.patch('/api/moderation/:id', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   const { status } = req.body;
   if (!['Approved', 'Rejected'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
   
   try {
     await supabase.from('moderation_queue').update({ status }).eq('id', req.params.id);
-    app.locals.auditLog(req.session.userId, `moderation_${status.toLowerCase()}`, 'moderation', req.params.id, `Moderation item ${status}`);
+    app.locals.auditLog(req.userId, `moderation_${status.toLowerCase()}`, 'moderation', req.params.id, `Moderation item ${status}`);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update moderation' });
@@ -133,7 +123,7 @@ app.patch('/api/moderation/:id', async (req, res) => {
 
 // ─── Metrics ───
 app.get('/api/metrics', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   
   try {
     const { count: activeUsers } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'Active');

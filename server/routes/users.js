@@ -11,13 +11,13 @@ const router = Router();
 
 // Auth guard middleware
 const requireAuth = (req, res, next) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
   next();
 };
 
 // Admin guard middleware
 const requireAdmin = async (req, res, next) => {
-  const { data: user } = await supabase.from('users').select('role').eq('id', req.session.userId).single();
+  const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
   if (user?.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
   next();
 };
@@ -42,7 +42,7 @@ router.patch('/me/avatar', requireAuth, upload.single('avatar'), async (req, res
     const { data: user, error: updateError } = await supabase
       .from('users')
       .update({ avatar: avatarUrl })
-      .eq('id', req.session.userId)
+      .eq('id', req.userId)
       .select('id, name, email, avatar, role, status, credits, streak, progress, date_joined')
       .single();
 
@@ -68,7 +68,7 @@ router.patch('/me', requireAuth, async (req, res) => {
         .from('users')
         .select('id')
         .eq('email', email.trim().toLowerCase())
-        .neq('id', req.session.userId)
+        .neq('id', req.userId)
         .single();
         
       if (existing) return res.status(409).json({ error: 'Email already in use' });
@@ -81,7 +81,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     const { data: user, error } = await supabase
       .from('users')
       .update(updates)
-      .eq('id', req.session.userId)
+      .eq('id', req.userId)
       .select('id, name, email, avatar, role, status, credits, streak, progress, date_joined')
       .single();
 
@@ -99,14 +99,14 @@ router.patch('/me/password', requireAuth, async (req, res) => {
   if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
 
   try {
-    const { data: user } = await supabase.from('users').select('password_hash').eq('id', req.session.userId).single();
+    const { data: user } = await supabase.from('users').select('password_hash').eq('id', req.userId).single();
 
     if (!bcrypt.compareSync(currentPassword, user.password_hash)) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
     const newHash = bcrypt.hashSync(newPassword, 10);
-    await supabase.from('users').update({ password_hash: newHash }).eq('id', req.session.userId);
+    await supabase.from('users').update({ password_hash: newHash }).eq('id', req.userId);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update password' });
@@ -165,7 +165,7 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
     if (error) throw error;
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'user_create', 'user', user.id, `Admin created user: ${user.email} (${user.role})`);
+      req.app.locals.auditLog(req.userId, 'user_create', 'user', user.id, `Admin created user: ${user.email} (${user.role})`);
     }
 
     res.status(201).json(user);
@@ -197,7 +197,7 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res) => {
     if (error) throw error;
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'user_update', 'user', req.params.id, `Updated fields`);
+      req.app.locals.auditLog(req.userId, 'user_update', 'user', req.params.id, `Updated fields`);
     }
 
     res.json(user);
@@ -224,7 +224,7 @@ router.patch('/:id/suspend', requireAuth, requireAdmin, async (req, res) => {
     if (error) throw error;
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, `user_${newStatus.toLowerCase()}`, 'user', req.params.id, `${target.name} → ${newStatus}`);
+      req.app.locals.auditLog(req.userId, `user_${newStatus.toLowerCase()}`, 'user', req.params.id, `${target.name} → ${newStatus}`);
     }
 
     if (req.app.locals.notify) {
@@ -261,7 +261,7 @@ router.patch('/:id/role', requireAuth, requireAdmin, async (req, res) => {
     if (error) throw error;
 
     if (req.app.locals.auditLog) {
-      req.app.locals.auditLog(req.session.userId, 'user_role_change', 'user', req.params.id, `${target.name} → ${role}`);
+      req.app.locals.auditLog(req.userId, 'user_role_change', 'user', req.params.id, `${target.name} → ${role}`);
     }
 
     res.json(user);
