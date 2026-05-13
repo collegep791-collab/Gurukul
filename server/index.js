@@ -1,3 +1,11 @@
+/**
+ * server/index.js
+ * 
+ * Technical Component: Backend Express Server & Vercel Entry Point
+ * Description: This is the core backend application. It configures the Express.js framework,
+ * initializes global middleware (CORS, Rate Limiting, Cookie Parser for JWT Auth), 
+ * and maps all API routes. On Vercel, this file is executed as a Serverless Function.
+ */
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';

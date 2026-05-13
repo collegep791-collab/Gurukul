@@ -1,3 +1,12 @@
+/**
+ * Assignments.jsx
+ * 
+ * Technical Component: Assignments UI Module
+ * Description: Handles the rendering of the Assignments portal for both students and teachers.
+ * - Teachers: Can create new assignments, view all active/past assignments, and grade student submissions.
+ * - Students: Can view their assigned coursework, upload file submissions, and view graded feedback.
+ * Connects directly to DataContext.jsx for all state and API operations.
+ */
 import { useState, useRef } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';

@@ -1,3 +1,13 @@
+/**
+ * App.jsx
+ * 
+ * Technical Component: Main Frontend Router
+ * Description: This file is the root component of the Gurukul application.
+ * It manages all client-side routing using React Router, protecting restricted 
+ * routes with the <AuthGuard> component (which checks for a valid session/JWT).
+ * It dynamically routes users to their respective dashboards (Admin, Student, Teacher)
+ * and provides fallbacks like the 404 <NotFound> page.
+ */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider, useData } from './context/DataContext';

@@ -1,3 +1,12 @@
+/**
+ * DataContext.jsx
+ * 
+ * Technical Component: Global State Manager & API Controller
+ * Description: This context provider is the backbone of the frontend.
+ * It manages the global application state (user session, resources, chat messages, etc.)
+ * and wraps all REST API calls to the Express/Vercel backend using Axios.
+ * It also manages the Supabase Realtime WebSocket connections for live chat and notifications.
+ */
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api.js';
 import { supabase } from '../lib/supabase.js';

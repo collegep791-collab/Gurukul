@@ -1,3 +1,10 @@
+/**
+ * ResourceHub.jsx
+ * 
+ * Technical Component: Academic Resources Library UI
+ * Description: Renders the digital library where users can browse, search, and filter academic materials.
+ * Includes dynamic category generation, server-side filtering via query parameters, and a modal for uploading new resources to Supabase Storage.
+ */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import UploadModal from '../components/UploadModal';
