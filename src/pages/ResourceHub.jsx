@@ -107,7 +107,7 @@ export default function ResourceHub() {
 
   const openResource = (res) => {
     if (res.file_path) {
-      window.open(`/uploads/${res.file_path}`, '_blank');
+      window.open(res.file_path.startsWith('http') ? res.file_path : `/uploads/${res.file_path}`, '_blank');
     } else if (res.thumbnail && res.thumbnail.startsWith('http')) {
       window.open(res.thumbnail, '_blank');
     }

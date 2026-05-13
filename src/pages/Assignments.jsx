@@ -266,7 +266,7 @@ export default function Assignments() {
 
                   {sub.comment && <p className="text-xs text-on-surface-variant dark:text-slate-400 mb-3 italic">"{sub.comment}"</p>}
                   {sub.file_path && (
-                    <a href={`/uploads/${sub.file_path}`} target="_blank" rel="noreferrer" className="text-primary dark:text-indigo-400 text-xs font-black flex items-center gap-1 mb-3">
+                    <a href={sub.file_path.startsWith('http') ? sub.file_path : `/uploads/${sub.file_path}`} target="_blank" rel="noreferrer" className="text-primary dark:text-indigo-400 text-xs font-black flex items-center gap-1 mb-3">
                       <span className="material-symbols-outlined text-sm">download</span> Download File
                     </a>
                   )}
