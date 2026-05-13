@@ -1,3 +1,11 @@
+/**
+ * src/pages/Users.jsx
+ * 
+ * Technical Component: Institutional Directory & Identity Management
+ * Description: Acts as the primary directory for the campus. Standard users can
+ * browse profiles and initiate direct messages. Admins possess elevated controls 
+ * to suspend accounts, override roles, or manually provision new user identities.
+ */
 import { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';

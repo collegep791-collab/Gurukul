@@ -1,3 +1,12 @@
+/**
+ * server/routes/auth.js
+ * 
+ * Technical Component: Authentication Controller
+ * Description: Handles secure user authentication flows including traditional 
+ * email/password login (using bcrypt for password hashing), user registration 
+ * (with strict USN validation), and Google OAuth integration. Upon successful 
+ * authentication, it provisions a JWT cookie via the jwt.js module.
+ */
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import supabase from '../supabase.js';

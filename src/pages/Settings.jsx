@@ -1,3 +1,11 @@
+/**
+ * src/pages/Settings.jsx
+ * 
+ * Technical Component: User Preferences & Account Configuration
+ * Description: Allows users to configure their UI preferences (Dark/Light mode),
+ * notification preferences, and manage their account security (e.g. changing passwords,
+ * updating avatars).
+ */
 import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';

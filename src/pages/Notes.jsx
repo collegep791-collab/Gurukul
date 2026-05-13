@@ -1,3 +1,11 @@
+/**
+ * src/pages/Notes.jsx
+ * 
+ * Technical Component: Digital Notebook Interface
+ * Description: A unified workspace for managing personal study notes and viewing
+ * globally broadcasted course notes from faculty. Implements auto-saving forms and
+ * a masonry/grid layout for note organization.
+ */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import DashboardLayout from '../components/DashboardLayout';

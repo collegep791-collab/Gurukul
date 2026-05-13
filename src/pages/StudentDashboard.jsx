@@ -1,3 +1,12 @@
+/**
+ * src/pages/StudentDashboard.jsx
+ * 
+ * Technical Component: Student Portal Interface
+ * Description: The primary landing page for authenticated Student accounts.
+ * Aggregates data from DataContext to display the student's active assignments,
+ * recent academic resources, GPA/Progress metrics, and a quick-view of their
+ * enrolled chat channels and upcoming deadlines.
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';

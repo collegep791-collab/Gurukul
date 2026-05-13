@@ -1,3 +1,12 @@
+/**
+ * server/routes/assignments.js
+ * 
+ * Technical Component: Academic Assignments Controller
+ * Description: Manages the lifecycle of assignments and student submissions.
+ * Includes Role-Based Access Control (RBAC) to ensure only Teachers/Admins can 
+ * create assignments or grade submissions. Integrates with Supabase Storage to 
+ * handle file uploads for student submissions.
+ */
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';

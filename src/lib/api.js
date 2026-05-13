@@ -1,3 +1,12 @@
+/**
+ * src/lib/api.js
+ * 
+ * Technical Component: HTTP Fetch API Wrapper
+ * Description: A centralized utility for making REST API calls to the backend.
+ * It enforces strict `credentials: 'include'` on every request to ensure the HttpOnly
+ * JWT cookie is sent along. It also centralizes error handling, automatically intercepting
+ * 401 Unauthorized responses to force a secure logout/redirect back to the login screen.
+ */
 const BASE = '/api';
 
 async function request(method, path, body = null) {

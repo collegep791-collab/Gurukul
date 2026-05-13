@@ -1,3 +1,12 @@
+/**
+ * src/pages/Login.jsx
+ * 
+ * Technical Component: Authentication UI
+ * Description: Renders the login/registration forms and integrates the Google 
+ * Sign-In (GSI) SDK. It sends credentials to the backend auth controller, waits 
+ * for the secure HttpOnly cookie to be set, and then initializes the user's 
+ * session state in the DataContext before redirecting to the correct dashboard.
+ */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';

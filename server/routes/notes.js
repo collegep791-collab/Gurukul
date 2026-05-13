@@ -1,3 +1,11 @@
+/**
+ * server/routes/notes.js
+ * 
+ * Technical Component: Personal & Course Notes API
+ * Description: Handles CRUD operations for digital notes. Students can create
+ * and manage personal notes, while Teachers and Admins can create global notes
+ * that are broadcast to all users in the system.
+ */
 import { Router } from 'express';
 import supabase from '../supabase.js';
 

@@ -1,3 +1,11 @@
+/**
+ * server/routes/notifications.js
+ * 
+ * Technical Component: Notification Center API
+ * Description: Retrieves and manages system notifications for the authenticated user.
+ * Provides endpoints for pagination, fetching unread counts, and marking individual 
+ * or bulk notifications as read.
+ */
 import { Router } from 'express';
 import supabase from '../supabase.js';
 

@@ -1,3 +1,12 @@
+/**
+ * server/routes/chat.js
+ * 
+ * Technical Component: Chat & Messaging API Controller
+ * Description: Manages the REST API endpoints for the real-time communication system.
+ * Handles the creation of channels, direct messages (DMs), and message persistence. 
+ * Real-time broadcasting is handled passively via Supabase Realtime on the client side,
+ * but this controller ensures all messages are securely stored in the PostgreSQL database.
+ */
 import { Router } from 'express';
 import supabase from '../supabase.js';
 

@@ -1,3 +1,11 @@
+/**
+ * server/routes/audit.js
+ * 
+ * Technical Component: Administrative Audit Log API
+ * Description: Secure, Admin-only endpoints to fetch system-wide audit logs.
+ * Used for tracking administrative actions, user suspensions, and moderation
+ * events to ensure system accountability and transparency.
+ */
 import { Router } from 'express';
 import supabase from '../supabase.js';
 

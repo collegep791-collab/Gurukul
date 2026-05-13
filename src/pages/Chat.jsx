@@ -1,3 +1,12 @@
+/**
+ * src/pages/Chat.jsx
+ * 
+ * Technical Component: Real-time Communication Hub UI
+ * Description: Renders the dynamic chat interface. Users can browse available global 
+ * channels, class-specific groups, and direct messages. It listens to the Supabase
+ * Realtime WebSocket payloads managed by DataContext to instantly display new messages 
+ * and live typing indicators.
+ */
 import { useState, useRef, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';

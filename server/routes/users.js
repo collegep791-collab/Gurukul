@@ -1,3 +1,12 @@
+/**
+ * server/routes/users.js
+ * 
+ * Technical Component: User Management & Profile API
+ * Description: Provides endpoints for users to update their profiles, avatars, 
+ * and passwords. Also contains strict Admin-only routes for system administrators 
+ * to view, suspend, or modify global user accounts. Generates audit logs for 
+ * any administrative actions.
+ */
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';

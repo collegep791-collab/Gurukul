@@ -1,3 +1,12 @@
+/**
+ * server/routes/resources.js
+ * 
+ * Technical Component: Academic Resource Library API
+ * Description: Handles the CRUD operations for academic materials. Incorporates 
+ * Multer for parsing multipart/form-data, uploading files directly to Supabase Storage, 
+ * and storing the absolute public URL in the database. Supports robust filtering 
+ * by type and text search queries.
+ */
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';

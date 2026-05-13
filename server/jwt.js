@@ -1,3 +1,13 @@
+/**
+ * server/jwt.js
+ * 
+ * Technical Component: Stateless Authentication Middleware
+ * Description: Replaces stateful Express sessions with JSON Web Tokens (JWT).
+ * On Vercel serverless functions, memory is not shared between requests. This module
+ * signs a JWT containing the userId and stores it in an HTTP-Only, secure cookie. 
+ * The jwtMiddleware extracts and verifies this token on every incoming API request, 
+ * attaching the authenticated userId to the request object.
+ */
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.SESSION_SECRET || 'gurukul-dev-s3cr3t-ch4ng3-m3-1n-pr0duct10n';

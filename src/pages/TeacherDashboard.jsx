@@ -1,3 +1,12 @@
+/**
+ * src/pages/TeacherDashboard.jsx
+ * 
+ * Technical Component: Faculty Portal Interface
+ * Description: The primary landing page for authenticated Teacher accounts.
+ * Provides a high-level overview of active courses, pending assignment submissions
+ * requiring grading, published resources, and quick access to student rosters 
+ * and moderation tools.
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';

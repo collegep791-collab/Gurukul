@@ -1,3 +1,11 @@
+/**
+ * src/pages/AdminDashboard.jsx
+ * 
+ * Technical Component: Global Administrative Portal
+ * Description: High-level dashboard exclusively accessible to users with the 'ADMIN' role.
+ * Consolidates system-wide metrics, moderation queues, and audit logs. Allows the admin
+ * to approve/reject flagged content and monitor the overall health and security of the platform.
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
