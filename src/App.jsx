@@ -11,6 +11,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider, useData } from './context/DataContext';
+import { Analytics } from "@vercel/analytics/react";
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
@@ -73,6 +74,7 @@ function App() {
           </BrowserRouter>
         </DataProvider>
       </ThemeProvider>
+      <Analytics />
     </ErrorBoundary>
   );
 }
