@@ -1,90 +1,104 @@
 # Gurukul — Modern Scholar Platform
 
-A full-stack academic resource management and collaboration platform built with **React**, **Express.js**, **SQLite**, and **WebSockets**.
+Gurukul is a high-fidelity, comprehensive educational collaboration and academic resource management platform designed for modern scholars. 
 
-## Quick Start
+Built on a modern stack featuring **React 19**, **Express.js**, **Supabase (PostgreSQL, Realtime, Storage)**, and styled beautifully using **Tailwind CSS**, Gurukul facilitates real-time interaction, structured assignments, collaborative chats, and dynamic academic discovery.
 
-### Development (Two Terminals)
+---
 
-```bash
-# Terminal 1: API Server
-npm run server
+## 🌟 Tech Stack
 
-# Terminal 2: Frontend
-npm run dev
+| Layer | Technologies | Description |
+| --- | --- | --- |
+| **Frontend** | React 19, Vite, Tailwind CSS, React Router | Fast, reactive, responsive interface featuring ambient glassmorphism aesthetics and clean dark mode. |
+| **Backend** | Express.js | Secure REST API endpoints with robust error handling and 401 interception. |
+| **Database & Realtime** | Supabase (PostgreSQL, WebSockets) | Handles structural queries, real-time message broadcasting, typing indicators, and notification events. |
+| **Storage** | Supabase Storage Buckets | Secure storage and CDN distribution for academic resources and student assignment submissions. |
+| **Authentication** | JWT via HttpOnly Cookies | Stateless, highly-secure session management preventing XSS/CSRF vector compromises. |
+
+---
+
+## ⚡ Core Features
+
+- 📂 **Resource Hub**: Upload, catalog, search, and discover academic files (Documents, Videos, Audios, Images). Track exact views and downloads independently with an optimized state.
+- 📝 **Scholarly Notes**: Markdown-rich, personal study note-taking tool that enables students to structure their learning.
+- 💬 **Collaborative Chat**: Persistent, channel-based chat rooms equipped with real-time Supabase WebSockets, typing indicators, and timezone-aware local timestamp conversion.
+- 🎯 **Assignments Board**: Role-specific assignment creation, submission pipelines with document uploads, and grading logs for Teachers/Admins.
+- 🛡️ **Atheneum (Admin Portal)**: High-level metrics view, pending moderation queues, activity audit logging, and direct user management.
+- ⏰ **Gamified Streaks**: Daily engagement trackers with streak counters and credit systems rewarding consistent scholars.
+- 🌓 **Dynamic Theme Engine**: Smooth, persistent system-wide light/dark mode syncing preferences to both database profiles and `localStorage`.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- **Node.js** (v18+)
+- A **Supabase** project (configured table schema & storage buckets)
+
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env` in the root directory:
+```env
+PORT=3001
+JWT_SECRET=your-secure-jwt-secret-key
+
+# Supabase API Settings
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-Or start both simultaneously:
+### 3. Install & Bootstrap
+```bash
+# Install dependencies
+npm install
+
+# Seed the Supabase database with initial mock accounts & settings
+npm run seed
+```
+
+### 4. Running Locally
+
+Start the entire environment simultaneously (API server + Vite client development server) using:
 ```bash
 npm run dev:all
 ```
+- Frontend will be served at: **http://localhost:5173**
+- Backend API will be served at: **http://localhost:3001**
 
-Then open **http://localhost:5173**
+---
 
-### Docker (Production)
-
-```bash
-docker compose up --build
-```
-
-Then open **http://localhost:3001**
-
-## Demo Credentials
-
-| Role    | Email              | Password      |
-| ------- | ------------------ | ------------- |
-| Student | aryan@gurukul.edu  | password123   | |
-
-## Features
-
-- **Real-time Chat** — WebSocket-powered channels and direct messages
-- **Resource Hub** — Upload, search, and filter academic resources
-- **Scholarly Notes** — Markdown-powered note-taking with auto-save
-- **Dark Mode** — Persistent theme toggle stored in database + localStorage
-- **Admin Dashboard** — Metrics, moderation queue, resource management
-- **Role-based Access** — Admin, Teacher, and Student views
-
-## Tech Stack
-
-| Layer      | Technology                       |
-| ---------- | -------------------------------- |
-| Frontend   | React 19, Vite, Tailwind CSS    |
-| Backend    | Express.js, WebSocket (`ws`)     |
-| Database   | SQLite via `better-sqlite3`      |
-| Auth       | `express-session` + `bcryptjs`   |
-| Deployment | Docker + Docker Compose          |
-
-## Project Structure
+## 📦 Project Structure
 
 ```
 Gurukul/
-├── server/                 # Backend API
-│   ├── index.js            # Express + WebSocket server
-│   ├── db.js               # SQLite schema
-│   ├── seed.js             # Database seeding
-│   └── routes/             # REST API endpoints
-│       ├── auth.js
-│       ├── chat.js
-│       ├── notes.js
-│       ├── resources.js
-│       ├── settings.js
-│       └── users.js
-├── src/                    # React frontend
-│   ├── components/         # Shared UI components
-│   ├── context/            # DataContext + ThemeContext
-│   ├── lib/                # API wrapper
-│   └── pages/              # Page components
-├── Dockerfile
-├── docker-compose.yml
-└── package.json
+├── server/                 # Backend REST API Server
+│   ├── index.js            # Server entrypoint & static mounting
+│   ├── jwt.js              # Token signing, extraction, & validation
+│   ├── supabase.js         # Supabase Server SDK Client initialization
+│   ├── seed.js             # Initial db seeder script
+│   └── routes/             # API Route Handlers
+│       ├── auth.js         # User registration & cookie-session login
+│       ├── resources.js    # Resource downloads, views, & uploads
+│       ├── chat.js         # Channel queries & chat logs
+│       ├── assignments.js  # Coursework submissions & grading routes
+│       └── settings.js     # User preferences & customization sync
+├── src/                    # React Frontend client
+│   ├── components/         # Reusable Shell components (Sidebar, TopNav, ConfirmDialog)
+│   ├── context/            # Global contexts (DataContext, ThemeContext)
+│   ├── lib/                # Client utilities (api, supabase, dateUtils)
+│   ├── pages/              # Portal pages (AdminDashboard, StudentDashboard, Chat, Resources)
+│   ├── App.jsx             # Client-side AuthGuard router
+│   └── main.jsx            # Entry point mounting Tailwind CSS
+├── package.json            # Dependency manifest
+└── vite.config.js          # Vite build & local server configurations
 ```
 
-## Environment Variables
+---
 
-Copy `.env.example` to `.env` and update:
+## 🔑 Demo Credentials
 
-```
-PORT=3001
-SESSION_SECRET=your-secret
-NODE_ENV=production
-```
+| Role | Email | Password |
+| --- | --- | --- |
+| **System Admin** | `admin@gurukul.edu` | `password123` |
+| **Prof. Guide (Teacher)** | `teacher@gurukul.edu` | `password123` |
+| **Student One** | `student@gurukul.edu` | `password123` |
