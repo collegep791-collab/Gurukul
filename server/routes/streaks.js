@@ -1,3 +1,12 @@
+/**
+ * server/routes/streaks.js
+ * 
+ * Technical Component: User Streaks & Engagement Gamification Routes
+ * Description: Manages user login streaks, calculates consecutive daily check-ins,
+ * grants gamified credits, and tracks student engagement history via Supabase activity tables.
+ * 
+ * Dependencies: Express Router, Supabase Client
+ */
 import { Router } from 'express';
 import supabase from '../supabase.js';
 

@@ -319,4 +319,54 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/assignments/:id — teacher/admin deletes assignment
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { data: user } = await supabase.from('users').select('role').eq('id', req.userId).single();
+    if (user.role === 'STUDENT') return res.status(403).json({ error: 'Students cannot delete assignments' });
+
+    const { data: assignment } = await supabase.from('assignments').select('*').eq('id', req.params.id).single();
+    if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
+
+    // Only the creator or an ADMIN can delete
+    if (assignment.created_by !== req.userId && user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the assignment creator or an admin can delete this' });
+    }
+
+    // 1. Clean up submission files from Supabase Storage
+    const { data: submissions } = await supabase
+      .from('submissions')
+      .select('id, file_path')
+      .eq('assignment_id', req.params.id);
+
+    if (submissions && submissions.length > 0) {
+      const filesToRemove = submissions
+        .filter(s => s.file_path && s.file_path.includes('supabase.co'))
+        .map(s => s.file_path.split('/').pop())
+        .filter(Boolean);
+
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from('assignments').remove(filesToRemove);
+      }
+
+      // 2. Delete all submission records
+      await supabase.from('submissions').delete().eq('assignment_id', req.params.id);
+    }
+
+    // 3. Delete the assignment itself
+    const { error: deleteError } = await supabase.from('assignments').delete().eq('id', req.params.id);
+    if (deleteError) throw deleteError;
+
+    // 4. Audit log
+    if (req.app.locals.auditLog) {
+      req.app.locals.auditLog(req.userId, 'assignment_delete', 'assignment', req.params.id, `Deleted: ${assignment.title}`);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Assignment delete error:', err);
+    res.status(500).json({ error: 'Failed to delete assignment' });
+  }
+});
+
 export default router;

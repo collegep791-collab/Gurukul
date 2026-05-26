@@ -1,3 +1,13 @@
+/**
+ * UploadModal.jsx
+ * 
+ * Technical Component: Academic Resource Upload Modal
+ * Description: Implements a dual-mode upload interface (file upload or URL mapping)
+ * allowing users to add resources (Documents, Videos, Audios, or Images). Connects to form states,
+ * extracts sizes/formats, and triggers parent resource ingestion.
+ * 
+ * Dependencies: React
+ */
 import { useState, useRef } from 'react';
 
 export default function UploadModal({ isOpen, onClose, onSubmit }) {

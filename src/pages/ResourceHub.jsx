@@ -124,11 +124,47 @@ export default function ResourceHub() {
     fetchFiltered(filter, searchQuery);
   };
 
-  const openResource = (res) => {
+  const openResource = async (res) => {
+    // Track view by calling the backend endpoint (increments views count)
+    try {
+      await fetch(`/api/resources/${res.id}`, { credentials: 'include' });
+    } catch {}
+
+    // Optimistically update local state for instant UI feedback
+    setFilteredResources(prev => prev.map(r =>
+      r.id === res.id ? { ...r, views: (r.views ?? 0) + 1 } : r
+    ));
+
+    // Open the file
     if (res.file_path) {
       window.open(res.file_path.startsWith('http') ? res.file_path : `/uploads/${res.file_path}`, '_blank');
     } else if (res.thumbnail && res.thumbnail.startsWith('http')) {
       window.open(res.thumbnail, '_blank');
+    }
+  };
+
+  const downloadResource = async (e, res) => {
+    e.stopPropagation();
+    // Track download by calling the download endpoint (increments downloads count)
+    try {
+      await fetch(`/api/resources/${res.id}/download`, { credentials: 'include', redirect: 'manual' });
+    } catch {}
+
+    // Optimistically update local state for instant UI feedback
+    setFilteredResources(prev => prev.map(r =>
+      r.id === res.id ? { ...r, downloads: (r.downloads ?? 0) + 1 } : r
+    ));
+
+    // Trigger file download
+    if (res.file_path) {
+      const fileUrl = res.file_path.startsWith('http') ? res.file_path : `/uploads/${res.file_path}`;
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.setAttribute('download', res.title || 'download');
+      link.setAttribute('target', '_blank');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -139,6 +175,7 @@ export default function ResourceHub() {
       fetchFiltered(filter, searchQuery);
     }
   };
+
 
   return (
     <DashboardLayout>
@@ -295,6 +332,13 @@ export default function ResourceHub() {
                           <span className="material-symbols-outlined text-sm">delete</span>
                         </button>
                       )}
+                      <button 
+                        onClick={(e) => downloadResource(e, res)} 
+                        className="text-primary dark:text-indigo-400 hover:bg-primary/10 dark:hover:bg-indigo-500/10 p-1 rounded transition-colors"
+                        title="Download Resource"
+                      >
+                        <span className="material-symbols-outlined text-sm">download</span>
+                      </button>
                       <span className="text-primary dark:text-indigo-400 text-[11px] font-black uppercase tracking-widest flex items-center gap-1 group-hover:gap-2 transition-all">
                         {res.type === 'Video' ? 'Watch' : 'Open'}
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>

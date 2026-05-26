@@ -11,6 +11,8 @@ import { useState, useRef, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 import api from '../lib/api';
+import { toLocalTime } from '../lib/dateUtils';
+
 
 export default function Chat() {
   const { user, channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, createChannel, broadcastTyping, typingUsers } = useData();
@@ -278,7 +280,7 @@ export default function Chat() {
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-sm font-black text-on-surface dark:text-white">{msg.sender_name}</span>
                         <span className="text-[10px] text-outline dark:text-slate-500 font-bold">
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {toLocalTime(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     )}
@@ -291,7 +293,7 @@ export default function Chat() {
                     </div>
                     {isMe && (
                       <span className="text-[9px] text-outline dark:text-slate-600 font-black uppercase tracking-widest mt-2">
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Sent
+                        {toLocalTime(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Sent
                       </span>
                     )}
                   </div>

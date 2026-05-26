@@ -1,3 +1,15 @@
+/**
+ * src/context/ThemeContext.jsx
+ * 
+ * Technical Component: Theme State Manager (Dark/Light Mode)
+ * Description: Manages the application's visual theme using React Context. On mount,
+ * it reads the user's preference from localStorage for instant load (no flash). When
+ * the user is authenticated, it syncs with the server-stored theme preference via the
+ * Settings API. Toggling the theme updates localStorage, the HTML root class, and 
+ * persists the choice to the backend via PUT /api/settings.
+ * 
+ * Demo Note: Toggle the dark/light mode button in the TopNav to see this in action.
+ */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../lib/api.js';
 

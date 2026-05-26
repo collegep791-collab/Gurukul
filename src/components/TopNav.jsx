@@ -1,7 +1,19 @@
+/**
+ * TopNav.jsx
+ * 
+ * Technical Component: Top Navigation Bar
+ * Description: Implements a responsive top navigation bar for the Gurukul application.
+ * It manages real-time student notification overlays, unread notification counts,
+ * dark mode toggling, user profiles, mobile search inputs, and logout flows.
+ * 
+ * Dependencies: react-router-dom, ThemeContext, DataContext, dateUtils
+ */
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
+import { toLocalTime } from '../lib/dateUtils';
+
 
 export default function TopNav() {
   const { isDark, toggleDark } = useTheme();
@@ -148,7 +160,7 @@ export default function TopNav() {
                           {!notif.read && <span className="w-2 h-2 bg-primary dark:bg-indigo-500 rounded-full flex-shrink-0 mt-1"></span>}
                         </div>
                         <p className="text-[10px] text-on-surface-variant dark:text-slate-500 line-clamp-1 mt-0.5">{notif.body}</p>
-                        <p className="text-[9px] text-outline dark:text-slate-600 mt-1 font-bold">{new Date(notif.created_at).toLocaleDateString()}</p>
+                        <p className="text-[9px] text-outline dark:text-slate-600 mt-1 font-bold">{toLocalTime(notif.created_at).toLocaleDateString()}</p>
                       </div>
                     </button>
                   ))}

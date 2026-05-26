@@ -1,3 +1,12 @@
+/**
+ * DashboardLayout.jsx
+ * 
+ * Technical Component: Shared Shell Layout Component
+ * Description: Renders the ambient workspace background, responsive grid alignment overlays,
+ * desktop Sidebar, top navigation headers, and responsive mobile BottomNav modules.
+ * 
+ * Dependencies: React, DataContext, Sidebar, TopNav, BottomNav
+ */
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import BottomNav from './BottomNav';

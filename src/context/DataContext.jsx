@@ -249,6 +249,11 @@ export function DataProvider({ children }) {
     return await api.patch(`/assignments/${assignmentId}/submissions/${subId}/grade`, { grade, feedback });
   }, []);
 
+  const deleteAssignment = useCallback(async (id) => {
+    await api.delete(`/assignments/${id}`);
+    setAssignments(prev => prev.filter(a => a.id !== id));
+  }, []);
+
   // ─── Notifications ───
   const fetchNotifications = useCallback(async () => {
     try {
@@ -382,7 +387,7 @@ export function DataProvider({ children }) {
       users, fetchUsers, updateUserRole, toggleUserSuspend, createUser,
       channels, activeChannelId, messages, sendMessage, switchChannel, fetchChannels, createChannel, broadcastTyping, typingUsers,
       notes, createNote, updateNote, deleteNote, fetchNotes,
-      assignments, createAssignment, submitAssignment, fetchAssignments, fetchSubmissions, gradeSubmission,
+      assignments, createAssignment, submitAssignment, fetchAssignments, fetchSubmissions, gradeSubmission, deleteAssignment,
       notifications, unreadCount, fetchNotifications, fetchUnreadCount, markNotificationRead, markAllRead,
       moderationQueue, approveModeration, rejectModeration,
       metrics, fetchMetrics,

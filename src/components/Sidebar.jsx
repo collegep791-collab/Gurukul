@@ -1,3 +1,14 @@
+/**
+ * Sidebar.jsx
+ * 
+ * Technical Component: Main Navigation Sidebar
+ * Description: Implements a responsive left sidebar navigation for the Gurukul application.
+ * It filters navigation links dynamically based on the current user's role (Admin, Teacher, Student),
+ * highlighting the active link using React Router, and resolves role-specific routing like 
+ * directing teachers to /teacher/dashboard and students to /student/dashboard.
+ * 
+ * Dependecies: react-router-dom, DataContext
+ */
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
@@ -17,8 +28,17 @@ export default function Sidebar() {
   const location = useLocation();
   const { user } = useData();
 
-  const filteredItems = navItems.filter(item => item.role.includes(user.role));
+  const filteredItems = navItems
+    .filter(item => item.role.includes(user?.role))
+    .map(item => {
+      // Dynamic routing adjustment: Teachers go to /teacher/dashboard, students to /student/dashboard
+      if (item.path === '/student/dashboard' && user?.role === 'TEACHER') {
+        return { ...item, path: '/teacher/dashboard' };
+      }
+      return item;
+    });
   const navigate = useNavigate();
+
 
   return (
     <aside className="hidden md:flex flex-col gap-2 p-4 pt-4 h-[calc(100vh-64px)] w-64 bg-surface-container-low dark:bg-slate-950 border-r border-outline-variant/10 dark:border-slate-800/50 fixed left-0 overflow-y-auto">

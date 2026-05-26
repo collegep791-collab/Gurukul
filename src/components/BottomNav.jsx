@@ -1,3 +1,15 @@
+/**
+ * src/components/BottomNav.jsx
+ * 
+ * Technical Component: Mobile Bottom Navigation Bar
+ * Description: A fixed-position navigation bar rendered only on mobile viewports (hidden
+ * on md+ screens via Tailwind). Uses React Router's NavLink for active-state highlighting
+ * with Material Symbols icons. The navigation items dynamically adapt to the user's role
+ * (e.g., ADMIN sees different paths than STUDENT). Follows iOS safe-area-inset conventions
+ * for proper display on notched devices.
+ * 
+ * Demo Note: Resize browser to mobile width or use DevTools responsive mode to see this bar.
+ */
 import { NavLink } from 'react-router-dom';
 
 export default function BottomNav({ role }) {

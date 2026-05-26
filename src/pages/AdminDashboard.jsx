@@ -9,12 +9,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { useData } from '../context/DataContext';
 
 export default function AdminDashboard() {
   const { resources, deleteResource, moderationQueue, approveModeration, rejectModeration, metrics, fetchMetrics, users, assignments } = useData();
   const navigate = useNavigate();
   const [resourceFilter, setResourceFilter] = useState('All');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   if (!metrics) return (
     <DashboardLayout>
@@ -159,7 +161,7 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => navigate('/resources')} className="p-1.5 text-on-surface-variant dark:text-slate-500 hover:text-primary dark:hover:text-indigo-400 transition-colors" title="View in Resource Hub"><span className="material-symbols-outlined text-[18px]">open_in_new</span></button>
-                          <button onClick={() => deleteResource(res.id)} className="p-1.5 text-on-surface-variant dark:text-slate-500 hover:text-error dark:hover:text-red-400 transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+                          <button onClick={() => setDeleteConfirmId(res.id)} className="p-1.5 text-on-surface-variant dark:text-slate-500 hover:text-error dark:hover:text-red-400 transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                         </div>
                       </td>
                     </tr>
@@ -255,6 +257,21 @@ export default function AdminDashboard() {
 
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={deleteConfirmId !== null}
+        title="Delete Resource?"
+        message="Are you sure you want to delete this resource? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={async () => {
+          if (deleteConfirmId) {
+            await deleteResource(deleteConfirmId);
+            setDeleteConfirmId(null);
+          }
+        }}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </DashboardLayout>
   );
 }

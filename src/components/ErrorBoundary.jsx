@@ -1,3 +1,13 @@
+/**
+ * ErrorBoundary.jsx
+ * 
+ * Technical Component: Application Error Boundaries Interceptor
+ * Description: Implements a React component error boundary catcher to catch unhandled
+ * runtime runtime exceptions in child component structures, rendering a beautiful full-screen fallback page
+ * that describes the crash context instead of failing with a blank screen.
+ * 
+ * Dependencies: React
+ */
 import { Component } from 'react';
 
 export default class ErrorBoundary extends Component {

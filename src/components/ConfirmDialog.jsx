@@ -1,3 +1,11 @@
+/**
+ * ConfirmDialog.jsx
+ * 
+ * Technical Component: Shared Confirmation Dialog Modal
+ * Description: Implements a highly accessible custom modal overlay to handle user confirmations
+ * for sensitive operations (such as delete requests), using high-fidelity dark-mode compliant layout,
+ * customizable messages/labels, and smooth backdrop blur overlays.
+ */
 export default function ConfirmDialog({ isOpen, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', variant = 'danger', onConfirm, onCancel }) {
   if (!isOpen) return null;
 

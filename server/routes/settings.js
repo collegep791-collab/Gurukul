@@ -1,3 +1,12 @@
+/**
+ * server/routes/settings.js
+ * 
+ * Technical Component: User Settings API Routes
+ * Description: Manages CRUD operations for user settings, including light/dark theme preference,
+ * two-factor authentication, and notifications toggles, synced with Supabase storage.
+ * 
+ * Dependencies: Express Router, Supabase Client
+ */
 import { Router } from 'express';
 import supabase from '../supabase.js';
 

@@ -1,3 +1,13 @@
+/**
+ * server/seed.js
+ * 
+ * Technical Component: Database Ingestion Seeder Script
+ * Description: Populates a newly provisioned Supabase/PostgreSQL schema with mock accounts
+ * (Admin, Teacher, Student) using hashed bcrypt credentials, initial credits, settings,
+ * resources, and system states to bootstrap local development and testing.
+ * 
+ * Dependencies: bcryptjs, Supabase Client
+ */
 import bcrypt from 'bcryptjs';
 import supabase from './supabase.js';
 

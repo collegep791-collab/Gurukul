@@ -12,7 +12,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useData } from '../context/DataContext';
 
 export default function Assignments() {
-  const { user, assignments, submitAssignment, gradeSubmission, fetchAssignments, createAssignment, fetchSubmissions } = useData();
+  const { user, assignments, submitAssignment, gradeSubmission, fetchAssignments, createAssignment, fetchSubmissions, deleteAssignment } = useData();
   const [tab, setTab] = useState('active'); // active | past | create
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [submissions, setSubmissions] = useState([]);
@@ -21,9 +21,6 @@ export default function Assignments() {
   const [gradeInput, setGradeInput] = useState('');
   const [feedbackInput, setFeedbackInput] = useState('');
   const [loadingSubs, setLoadingSubs] = useState(false);
-  const fileRef = useRef(null);
-
-  // Create form
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newCourse, setNewCourse] = useState('');
@@ -67,10 +64,11 @@ export default function Assignments() {
   const handleSubmit = async (assignmentId) => {
     setSubmitting(true);
     try {
-      const file = fileRef.current?.files[0] || null;
+      const fileInput = document.getElementById(`file-input-${assignmentId}`);
+      const file = fileInput?.files?.[0] || null;
       await submitAssignment(assignmentId, file, comment);
       setComment('');
-      if (fileRef.current) fileRef.current.value = '';
+      if (fileInput) fileInput.value = '';
       await fetchAssignments();
     } catch (err) {
       alert(err.message || 'Submission failed');
@@ -106,6 +104,17 @@ export default function Assignments() {
     if (diff < 0) return 'Overdue';
     if (diff === 0) return 'Due today';
     return `${diff} days left`;
+  };
+
+  const handleDeleteAssignment = async (e, id) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this assignment? All submissions will also be removed.')) {
+      try {
+        await deleteAssignment(id);
+      } catch (err) {
+        alert(err.message || 'Failed to delete assignment');
+      }
+    }
   };
 
   return (
@@ -178,9 +187,20 @@ export default function Assignments() {
             <div key={a.id} className="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl border border-outline-variant/5 dark:border-slate-800 p-6 hover:shadow-xl hover:-translate-y-1 transition-all group">
               <div className="flex items-start justify-between mb-4">
                 <span className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full bg-primary-fixed dark:bg-indigo-900/50 text-on-primary-fixed-variant dark:text-indigo-300">{a.course || 'General'}</span>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${a.status === 'Closed' ? 'text-outline dark:text-slate-500' : getDaysUntil(a.due_date) === 'Overdue' ? 'text-error' : 'text-tertiary dark:text-emerald-400'}`}>
-                  {a.status === 'Closed' ? 'Closed' : getDaysUntil(a.due_date)}
-                </span>
+                <div className="flex items-center gap-2">
+                  {isTeacher && (user?.role === 'ADMIN' || a.created_by === user?.id) && (
+                    <button
+                      onClick={(e) => handleDeleteAssignment(e, a.id)}
+                      className="text-error hover:bg-error/10 p-1 rounded-lg transition-colors"
+                      title="Delete Assignment"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  )}
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${a.status === 'Closed' ? 'text-outline dark:text-slate-500' : getDaysUntil(a.due_date) === 'Overdue' ? 'text-error' : 'text-tertiary dark:text-emerald-400'}`}>
+                    {a.status === 'Closed' ? 'Closed' : getDaysUntil(a.due_date)}
+                  </span>
+                </div>
               </div>
               <h3 className="text-lg font-black text-on-surface dark:text-white mb-2 line-clamp-2 group-hover:text-primary dark:group-hover:text-indigo-400 transition-colors">{a.title}</h3>
               <p className="text-xs text-on-surface-variant dark:text-slate-400 mb-4 line-clamp-2">{a.description}</p>
@@ -208,7 +228,7 @@ export default function Assignments() {
               {/* Student Submit Area */}
               {isStudent && a.status === 'Active' && !a.my_submission_id && (
                 <div className="mt-4 pt-4 border-t border-outline-variant/10 dark:border-slate-800 space-y-3">
-                  <input ref={fileRef} type="file" className="w-full text-xs text-on-surface-variant dark:text-slate-400 file:mr-3 file:bg-primary-fixed dark:file:bg-indigo-900/50 file:text-primary dark:file:text-indigo-400 file:border-0 file:rounded-lg file:px-4 file:py-2 file:text-xs file:font-bold file:cursor-pointer" />
+                  <input id={`file-input-${a.id}`} type="file" className="w-full text-xs text-on-surface-variant dark:text-slate-400 file:mr-3 file:bg-primary-fixed dark:file:bg-indigo-900/50 file:text-primary dark:file:text-indigo-400 file:border-0 file:rounded-lg file:px-4 file:py-2 file:text-xs file:font-bold file:cursor-pointer" />
                   <input value={comment} onChange={e => setComment(e.target.value)} placeholder="Optional comment..." className="w-full px-3 py-2 bg-surface-container-low dark:bg-slate-800 rounded-lg text-xs outline-none border border-outline-variant/10 dark:border-slate-700 dark:text-white" />
                   <button onClick={() => handleSubmit(a.id)} disabled={submitting} className="w-full bg-primary dark:bg-indigo-600 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
                     {submitting ? 'Submitting...' : 'Submit'}
