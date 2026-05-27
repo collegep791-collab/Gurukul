@@ -9,6 +9,7 @@
  * and provides fallbacks like the 404 <NotFound> page.
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider, useData } from './context/DataContext';
 import { Analytics } from "@vercel/analytics/react";
