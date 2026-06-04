@@ -1,3 +1,15 @@
+/**
+ * src/pages/AuditLogs.jsx
+ * 
+ * Technical Component: Administrative Audit Trail Viewer
+ * Description: Admin-only page that renders a time-ordered table of all significant
+ * system events (logins, resource uploads, user suspensions, role changes, moderation
+ * actions). Fetches data from the /api/audit endpoint and displays actor details
+ * with avatars, action badges, and target entity references. Used for institutional
+ * accountability and security compliance.
+ * 
+ * Dependencies: DataContext (via DashboardLayout), api.js HTTP wrapper
+ */
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../lib/api';

@@ -1,3 +1,14 @@
+/**
+ * src/pages/NotFound.jsx
+ * 
+ * Technical Component: 404 Error Fallback Page
+ * Description: Renders when React Router cannot match any defined route path. Provides
+ * a styled full-screen error page with ambient background blur effects and a navigation
+ * button to return to the home route. This is the catch-all route defined as path="*"
+ * in App.jsx and handles both mistyped URLs and stale bookmarks.
+ * 
+ * Dependencies: react-router-dom (useNavigate)
+ */
 import { useNavigate } from 'react-router-dom';
 
 export default function NotFound() {
