@@ -119,7 +119,7 @@ export default function Login() {
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary">
                 <span className="material-symbols-outlined" data-icon="school" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
               </div>
-              <span className="text-2xl font-extrabold tracking-tight text-primary">Gurukul</span>
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-wide uppercase text-primary ml-2">Class Room Companion</span>
             </div>
           </header>
 

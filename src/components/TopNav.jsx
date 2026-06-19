@@ -74,7 +74,7 @@ export default function TopNav() {
             <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg flex items-center justify-center text-on-primary shadow-sm shadow-primary/20">
               <span className="material-symbols-outlined text-lg md:text-xl" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
             </div>
-            <span className="text-lg md:text-xl font-black tracking-tight text-primary dark:text-indigo-400 hidden sm:block">Gurukul</span>
+            <span className="text-lg md:text-xl font-extrabold uppercase tracking-wide text-primary dark:text-indigo-400 hidden sm:block ml-2">Class Room Companion</span>
           </div>
           
           {/* Desktop Search */}

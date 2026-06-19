@@ -49,7 +49,7 @@ export default function Sidebar() {
             <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>school</span>
           </div>
           <div>
-            <p className="text-sm font-black text-primary dark:text-indigo-400">Gurukul</p>
+            <p className="text-sm md:text-base font-extrabold uppercase tracking-wide text-primary dark:text-indigo-400">Class Room Companion</p>
             <p className="text-[10px] font-black text-outline dark:text-slate-500 uppercase tracking-widest">Modern Scholar</p>
           </div>
         </div>
